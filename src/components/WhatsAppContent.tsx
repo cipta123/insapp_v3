@@ -229,20 +229,31 @@ export default function WhatsAppContent() {
                   <div
                     key={contact.id}
                     onClick={() => handleContactSelect(contact)}
-                    className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                    className={`p-3 rounded-lg cursor-pointer transition-all duration-200 relative ${
                       selectedContact?.id === contact.id
                         ? 'bg-green-50 border border-green-200'
+                        : unreadCount > 0
+                        ? 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500'
                         : 'bg-gray-50 hover:bg-gray-100'
                     }`}
                   >
                     {/* Contact Header */}
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-white" />
+                        <div className="relative">
+                          <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-white" />
+                          </div>
+                          {unreadCount > 0 && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                          )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
+                          <p className={`text-sm truncate ${
+                            unreadCount > 0 
+                              ? 'font-bold text-gray-900' 
+                              : 'font-semibold text-gray-700'
+                          }`}>
                             {contact.name || formatPhoneNumber(contact.id)}
                           </p>
                           <div className="flex items-center space-x-1">
@@ -254,8 +265,8 @@ export default function WhatsAppContent() {
                         </div>
                       </div>
                       {unreadCount > 0 && (
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-medium text-white">{unreadCount}</span>
+                        <div className="min-w-[20px] h-5 px-2 bg-green-500 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-bold text-white">{unreadCount > 99 ? '99+' : unreadCount}</span>
                         </div>
                       )}
                     </div>
@@ -267,7 +278,11 @@ export default function WhatsAppContent() {
                           <CheckCheck className="h-3 w-3 text-blue-500" />
                         )}
                         {getMessageIcon(lastMessage.messageType)}
-                        <p className="text-xs text-gray-600 truncate flex-1">
+                        <p className={`text-xs truncate flex-1 ${
+                          unreadCount > 0 && !lastMessage.isFromBusiness
+                            ? 'font-semibold text-gray-900'
+                            : 'text-gray-600'
+                        }`}>
                           {lastMessage.messageType === 'text' 
                             ? lastMessage.text 
                             : `${lastMessage.messageType.charAt(0).toUpperCase() + lastMessage.messageType.slice(1)}`
