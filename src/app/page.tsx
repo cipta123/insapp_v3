@@ -9,6 +9,8 @@ import { quickReplies, stats } from '@/data/mockData'
 import { Platform, Reply } from '@/types'
 import CommentsContent from '@/components/CommentsContent'
 import WhatsAppContent from '@/components/WhatsAppContent'
+import { useAuth } from '@/components/AuthProvider'
+import { LogOut, User, Crown, Shield, Briefcase } from 'lucide-react'
 
 // Define a type that matches our Prisma model
 interface InstagramMessage {
@@ -25,6 +27,7 @@ interface InstagramMessage {
 }
 
 export default function Home() {
+  const { user, logout } = useAuth()
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'all'>('all')
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<InstagramMessage[]>([])
@@ -39,6 +42,26 @@ export default function Home() {
   const [isTabActive, setIsTabActive] = useState(true)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [isClient, setIsClient] = useState(false)
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'staff': return <User className="w-4 h-4" />
+      case 'admin': return <Shield className="w-4 h-4" />
+      case 'manager': return <Briefcase className="w-4 h-4" />
+      case 'direktur': return <Crown className="w-4 h-4" />
+      default: return <User className="w-4 h-4" />
+    }
+  }
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'staff': return 'text-blue-600 bg-blue-100'
+      case 'admin': return 'text-green-600 bg-green-100'
+      case 'manager': return 'text-purple-600 bg-purple-100'
+      case 'direktur': return 'text-amber-600 bg-amber-100'
+      default: return 'text-gray-600 bg-gray-100'
+    }
+  }
 
   const fetchMessages = async () => {
     try {
@@ -205,8 +228,39 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
+        {/* User Header */}
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Customer Service Dashboard</h1>
+              {user && (
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(user.role)}`}>
+                  {getRoleIcon(user.role)}
+                  <span>{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
+                </div>
+              )}
+            </div>
+            
+            {user && (
+              <div className="flex items-center space-x-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Stats Cards */}
-        <div className="mb-8">
+        <div className="mb-8 px-6 pt-6">
           <StatsCards stats={stats} />
           <div className="flex items-center justify-end space-x-2 text-sm text-gray-500 mt-4">
             <div className={`w-2 h-2 rounded-full ${isTabActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
