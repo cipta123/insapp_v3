@@ -48,7 +48,18 @@ export default function ReplyForm({ recipientId, conversationId, onReplySuccess 
         throw new Error(result.error || 'Failed to send reply');
       }
 
-      setSuccess('Reply sent successfully!');
+      // Check if reply was saved to database
+      if (result.savedToDatabase) {
+        setSuccess('Reply sent and saved successfully!');
+        console.log('✅ Reply saved to database with ID:', result.localMessageId);
+      } else if (result.reason === 'Duplicate reply prevented') {
+        setSuccess('Reply sent (duplicate prevented)');
+        console.log('⚠️ Duplicate reply prevented');
+      } else {
+        setSuccess('Reply sent to Instagram (database save failed)');
+        console.warn('⚠️ Database save failed:', result.dbError);
+      }
+      
       setMessage('');
       
       // Call success callback if provided

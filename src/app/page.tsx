@@ -27,22 +27,22 @@ export default function Home() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<InstagramMessage[]>([])
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/messages`;
-        const response = await fetch(apiUrl, { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error('Failed to fetch messages');
-        }
-        const data = await response.json();
-        setMessages(data);
-      } catch (error) {
-        console.error(error);
-        // Handle error (e.g., show a notification to the user)
+  const fetchMessages = async () => {
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/messages`;
+      const response = await fetch(apiUrl, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
       }
-    };
+      const data = await response.json();
+      setMessages(data);
+      console.log('📱 Messages refreshed:', data.length, 'messages');
+    } catch (error) {
+      console.error('❌ Failed to refresh messages:', error);
+    }
+  };
 
+  useEffect(() => {
     fetchMessages();
   }, []);
 
@@ -134,6 +134,7 @@ export default function Home() {
             messages={messages.filter(m => m.conversationId === selectedConversationId)}
             quickReplies={quickReplies}
             onSendReply={handleSendReply}
+            onRefreshMessages={fetchMessages}
           />
         </div>
       </div>

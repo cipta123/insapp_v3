@@ -54,17 +54,55 @@ export async function POST(req: NextRequest) {
       for (const entry of body.entry) {
         for (const event of entry.messaging) {
           if (event.message) {
-            await prisma.instagramMessage.create({
-              data: {
-                messageId: event.message.mid,
-                conversationId: event.sender.id + '_' + event.recipient.id, // Simple conversation ID
-                senderId: event.sender.id,
-                recipientId: event.recipient.id,
-                text: event.message.text,
-                timestamp: new Date(event.timestamp),
-              },
+            // Standardize conversationId format: always put smaller ID first
+            const ids = [event.sender.id, event.recipient.id].sort();
+            const standardizedConversationId = `${ids[0]}_${ids[1]}`;
+            
+            console.log('WEBHOOK: Original IDs:', event.sender.id, event.recipient.id);
+            console.log('WEBHOOK: Standardized conversationId:', standardizedConversationId);
+            
+            // Check if message already exists to prevent duplicates
+            // Check by messageId first
+            const existingByMessageId = await prisma.instagramMessage.findUnique({
+              where: {
+                messageId: event.message.mid
+              }
             });
-            console.log('✅ Message saved to database');
+            
+            // Also check for duplicate content in same conversation within last 5 minutes
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            const existingByContent = await prisma.instagramMessage.findFirst({
+              where: {
+                conversationId: standardizedConversationId,
+                senderId: event.sender.id,
+                text: event.message.text,
+                timestamp: {
+                  gte: fiveMinutesAgo
+                }
+              }
+            });
+            
+            if (existingByMessageId) {
+              console.log('⚠️ WEBHOOK: Message already exists (by messageId), skipping:', event.message.mid);
+            } else if (existingByContent) {
+              console.log('⚠️ WEBHOOK: Duplicate content detected, skipping:', {
+                text: event.message.text,
+                senderId: event.sender.id,
+                existingId: existingByContent.id
+              });
+            } else {
+              await prisma.instagramMessage.create({
+                data: {
+                  messageId: event.message.mid,
+                  conversationId: standardizedConversationId, // Use standardized format
+                  senderId: event.sender.id,
+                  recipientId: event.recipient.id,
+                  text: event.message.text,
+                  timestamp: new Date(event.timestamp),
+                },
+              });
+              console.log('✅ Message saved to database');
+            }
           }
         }
       }

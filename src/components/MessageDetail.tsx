@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Send, Smile, Paperclip, MoreVertical, Clock, CheckCircle } from 'lucide-react'
 import { QuickReply } from '@/types'
 import ReplyForm from './ReplyForm'
@@ -26,11 +26,18 @@ interface MessageDetailProps {
   messages: InstagramMessage[];
   quickReplies: QuickReply[];
   onSendReply: (messageId: string, reply: string) => void;
+  onRefreshMessages?: () => void; // Add refresh function
 }
 
-export default function MessageDetail({ conversationId, messages, quickReplies, onSendReply }: MessageDetailProps) {
+export default function MessageDetail({ conversationId, messages, quickReplies, onSendReply, onRefreshMessages }: MessageDetailProps) {
   const [replyText, setReplyText] = useState('')
   const [showQuickReplies, setShowQuickReplies] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   if (!conversationId || messages.length === 0) {
     return (
@@ -111,20 +118,30 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
 
       {/* Conversation History */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="space-y-4">
-          {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(msg => (
-            <div key={msg.id} className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-700">{msg.senderId}</span>
+        <div className="space-y-3">
+          {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(msg => {
+            const businessId = '17841404217906448';
+            const isFromBusiness = msg.senderId === businessId;
+            
+            return (
+              <div key={msg.id} className={`flex ${isFromBusiness ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  isFromBusiness 
+                    ? 'bg-blue-500 text-white rounded-br-none' 
+                    : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                }`}>
+                  <p className="text-sm leading-relaxed">{msg.text}</p>
+                  <div className={`text-xs mt-1 ${
+                    isFromBusiness ? 'text-blue-100' : 'text-gray-500'
+                  }`}>
+                    {formatTime(new Date(msg.timestamp))}
+                  </div>
                 </div>
-                <span className="text-sm text-gray-500">
-                  {formatTime(new Date(msg.timestamp))}
-                </span>
               </div>
-              <p className="text-gray-900 leading-relaxed">{msg.text}</p>
-            </div>
-          ))}
+            );
+          })}
+          {/* Auto-scroll target */}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
@@ -149,11 +166,36 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
 
       {/* Reply Form */}
       <ReplyForm 
-        recipientId={messages[0]?.senderId || ''}
+        recipientId={(() => {
+          // Find the customer ID (not our business ID)
+          const businessId = '17841404217906448'; // Our business account ID
+          
+          // Look through messages to find the customer ID
+          for (const msg of messages) {
+            if (msg.senderId !== businessId) {
+              return msg.senderId; // This is the customer
+            }
+            if (msg.recipientId !== businessId) {
+              return msg.recipientId; // This is the customer
+            }
+          }
+          
+          // Fallback: extract from conversationId
+          if (conversationId) {
+            const ids = conversationId.split('_');
+            return ids.find(id => id !== businessId) || ids[0];
+          }
+          return '';
+        })()}
         conversationId={conversationId}
         onReplySuccess={() => {
-          // Refresh messages or show success notification
-          console.log('Reply sent successfully!');
+          // Smart refresh: only refresh messages data
+          console.log('Reply sent successfully! Refreshing messages...');
+          if (onRefreshMessages) {
+            setTimeout(() => {
+              onRefreshMessages();
+            }, 1000); // Shorter delay for better UX
+          }
         }}
       />
     </div>
