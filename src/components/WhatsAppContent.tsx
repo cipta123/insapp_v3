@@ -393,15 +393,51 @@ export default function WhatsAppContent() {
                           ? 'bg-green-500 text-white' 
                           : 'bg-white text-gray-800 shadow-sm'
                       }`}>
-                        {message.messageType !== 'text' && (
+                        {/* Image Message */}
+                        {message.messageType === 'image' && message.mediaUrl && (
+                          <div className="mb-2">
+                            <img 
+                              src={`/api/whatsapp/download-media?media=${encodeURIComponent(message.mediaUrl)}`}
+                              alt="WhatsApp Image"
+                              className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                              onError={(e) => {
+                                // Fallback if image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.nextElementSibling?.classList.remove('hidden');
+                              }}
+                              onClick={() => {
+                                // Open image in new tab for full view
+                                if (message.mediaUrl) {
+                                  window.open(`/api/whatsapp/download-media?media=${encodeURIComponent(message.mediaUrl)}`, '_blank');
+                                }
+                              }}
+                            />
+                            {/* Fallback for failed image loads */}
+                            <div className="hidden flex items-center space-x-2 p-3 bg-gray-100 rounded-lg">
+                              <Image className="h-5 w-5 text-gray-400" />
+                              <div>
+                                <p className="text-sm text-gray-600">Image</p>
+                                <p className="text-xs text-gray-400">{message.mediaUrl}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Other Media Types */}
+                        {message.messageType !== 'text' && message.messageType !== 'image' && (
                           <div className="flex items-center space-x-2 mb-2">
                             {getMessageIcon(message.messageType)}
                             <span className="text-xs opacity-75">
                               {message.messageType.charAt(0).toUpperCase() + message.messageType.slice(1)}
                             </span>
+                            {message.mediaUrl && (
+                              <span className="text-xs opacity-50">({message.mediaUrl})</span>
+                            )}
                           </div>
                         )}
                         
+                        {/* Text Content (can be caption for images) */}
                         {message.text && (
                           <div className="text-sm">{message.text}</div>
                         )}
