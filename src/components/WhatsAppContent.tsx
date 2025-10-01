@@ -403,19 +403,36 @@ export default function WhatsAppContent() {
                                 e.stopPropagation();
                                 console.log('🖼️ Image clicked:', message.mediaUrl);
                                 
-                                // For now, let's just show an alert with the media info
-                                alert(`Image: ${message.mediaUrl}\nClick OK to try opening in new tab`);
-                                
-                                // Try to open the media URL
+                                // Determine if it's a URL or filename
                                 if (message.mediaUrl) {
-                                  const mediaUrl = `/api/whatsapp/download-media?media=${encodeURIComponent(message.mediaUrl)}`;
-                                  console.log('🔗 Opening URL:', mediaUrl);
-                                  window.open(mediaUrl, '_blank');
+                                  const isUrl = message.mediaUrl.startsWith('http://') || message.mediaUrl.startsWith('https://');
+                                  
+                                  if (isUrl) {
+                                    // Direct URL - open directly
+                                    console.log('🔗 Opening direct URL:', message.mediaUrl);
+                                    window.open(message.mediaUrl, '_blank');
+                                  } else {
+                                    // Filename - use download API
+                                    const mediaUrl = `/api/whatsapp/download-media?media=${encodeURIComponent(message.mediaUrl)}`;
+                                    console.log('🔗 Opening via download API:', mediaUrl);
+                                    window.open(mediaUrl, '_blank');
+                                  }
                                 }
                               }}
                             >
                               <img 
-                                src={`/api/whatsapp/download-media?media=${encodeURIComponent(message.mediaUrl)}`}
+                                src={(() => {
+                                  // Determine image source
+                                  if (!message.mediaUrl) return '';
+                                  const isUrl = message.mediaUrl.startsWith('http://') || message.mediaUrl.startsWith('https://');
+                                  if (isUrl) {
+                                    // Direct URL
+                                    return message.mediaUrl;
+                                  } else {
+                                    // Filename - use download API
+                                    return `/api/whatsapp/download-media?media=${encodeURIComponent(message.mediaUrl)}`;
+                                  }
+                                })()}
                                 alt="WhatsApp Image"
                                 className="max-w-full h-auto rounded-lg"
                                 onError={(e) => {
