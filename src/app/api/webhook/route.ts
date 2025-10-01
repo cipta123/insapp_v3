@@ -142,6 +142,103 @@ async function handleCommentEvent(commentData: any) {
 }
 
 /**
+ * Handles WhatsApp message events from webhook
+ */
+async function handleWhatsAppMessage(messageData: any) {
+  try {
+    console.log('📱 WHATSAPP: Processing message data:', messageData);
+    
+    if (!messageData.messages || messageData.messages.length === 0) {
+      console.log('📱 WHATSAPP: No messages in webhook data');
+      return;
+    }
+    
+    for (const message of messageData.messages) {
+      const messageId = message.id;
+      const senderId = message.from; // Phone number
+      const timestamp = new Date(parseInt(message.timestamp) * 1000);
+      
+      // Extract message content based on type
+      let text = null;
+      let messageType = 'text';
+      let mediaUrl = null;
+      
+      if (message.text) {
+        text = message.text.body;
+        messageType = 'text';
+      } else if (message.image) {
+        messageType = 'image';
+        mediaUrl = message.image.id; // WhatsApp media ID
+        text = message.image.caption || null;
+      } else if (message.audio) {
+        messageType = 'audio';
+        mediaUrl = message.audio.id;
+      } else if (message.video) {
+        messageType = 'video';
+        mediaUrl = message.video.id;
+        text = message.video.caption || null;
+      } else if (message.document) {
+        messageType = 'document';
+        mediaUrl = message.document.id;
+        text = message.document.filename || null;
+      }
+      
+      console.log('📱 WHATSAPP: Message details:', {
+        messageId,
+        senderId,
+        text,
+        messageType,
+        timestamp
+      });
+      
+      // Check if message already exists
+      const existingMessage = await prisma.whatsAppMessage.findUnique({
+        where: { messageId }
+      });
+      
+      if (existingMessage) {
+        console.log('⚠️ WHATSAPP: Message already exists, skipping:', messageId);
+        continue;
+      }
+      
+      // Save message to database
+      await prisma.whatsAppMessage.create({
+        data: {
+          messageId,
+          conversationId: senderId, // Use phone number as conversation ID
+          senderId,
+          recipientId: messageData.metadata?.phone_number_id || 'business',
+          text,
+          messageType,
+          mediaUrl,
+          timestamp,
+          isFromBusiness: false // Incoming messages are from customers
+        }
+      });
+      
+      console.log('✅ WHATSAPP: Message saved to database');
+      
+      // Auto-save contact info if not exists
+      await prisma.whatsAppContact.upsert({
+        where: { id: senderId },
+        update: { lastSeen: new Date() },
+        create: {
+          id: senderId,
+          name: messageData.contacts?.[0]?.profile?.name || null,
+          profileName: messageData.contacts?.[0]?.profile?.name || null,
+          lastSeen: new Date()
+        }
+      });
+      
+      console.log('✅ WHATSAPP: Contact info updated');
+    }
+    
+  } catch (error) {
+    console.error('💥 WHATSAPP: Error processing message:', error);
+  }
+}
+
+/**
  * Handles webhook verification for the Instagram Graph API.
  */
 export async function GET(req: NextRequest) {
@@ -264,6 +361,22 @@ export async function POST(req: NextRequest) {
             if (change.field === 'comments') {
               console.log('WEBHOOK: Received comment event:', JSON.stringify(change.value, null, 2));
               await handleCommentEvent(change.value);
+            }
+          }
+        }
+      }
+    }
+
+    // Handle WhatsApp webhook events
+    if (body.object === 'whatsapp_business_account') {
+      console.log('📱 WHATSAPP_WEBHOOK: Processing WhatsApp event...');
+      
+      for (const entry of body.entry) {
+        if (entry.changes) {
+          for (const change of entry.changes) {
+            if (change.field === 'messages') {
+              console.log('📱 WHATSAPP_WEBHOOK: Received message event:', JSON.stringify(change.value, null, 2));
+              await handleWhatsAppMessage(change.value);
             }
           }
         }

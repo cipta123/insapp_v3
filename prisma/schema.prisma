@@ -73,3 +73,36 @@ model InstagramComment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model WhatsAppMessage {
+  id             String   @id @default(cuid())
+  messageId      String   @unique // WhatsApp Message ID
+  conversationId String   // Phone number or conversation ID
+  senderId       String   // Phone number of sender
+  recipientId    String   // Phone number of recipient
+  text           String?  @db.Text // Message text (optional for media)
+  messageType    String   @default("text") // text, image, audio, video, document
+  mediaUrl       String?  // URL for media messages
+  timestamp      DateTime
+  isRead         Boolean  @default(false)
+  isFromBusiness Boolean  @default(false) // true if sent by business
+  
+  // Reply functionality
+  replyToId      String?  // ID of the message being replied to
+  replyTo        WhatsAppMessage? @relation("WhatsAppReplies", fields: [replyToId], references: [id])
+  replies        WhatsAppMessage[] @relation("WhatsAppReplies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WhatsAppContact {
+  id           String   @id // Phone number (e.g., +628123456789)
+  name         String?  // Contact name
+  profileName  String?  // WhatsApp profile name
+  lastSeen     DateTime @default(now())
+  isBlocked    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

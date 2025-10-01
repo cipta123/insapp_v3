@@ -8,6 +8,7 @@ import MessageDetail from '@/components/MessageDetail'
 import { quickReplies, stats } from '@/data/mockData'
 import { Platform, Reply } from '@/types'
 import CommentsContent from '@/components/CommentsContent'
+import WhatsAppContent from '@/components/WhatsAppContent'
 
 // Define a type that matches our Prisma model
 interface InstagramMessage {
@@ -28,6 +29,7 @@ export default function Home() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<InstagramMessage[]>([])
   const [comments, setComments] = useState<any[]>([])
+  const [whatsappMessages, setWhatsappMessages] = useState<any[]>([])
   const [isTabActive, setIsTabActive] = useState(true)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [isClient, setIsClient] = useState(false)
@@ -63,10 +65,26 @@ export default function Home() {
     }
   };
 
+  const fetchWhatsAppMessages = async () => {
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/whatsapp/messages`;
+      const response = await fetch(apiUrl, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Failed to fetch WhatsApp messages');
+      }
+      const data = await response.json();
+      setWhatsappMessages(data);
+      console.log('📱 WhatsApp messages refreshed:', data.length, 'messages');
+    } catch (error) {
+      console.error('❌ Failed to refresh WhatsApp messages:', error);
+    }
+  };
+
   useEffect(() => {
     setIsClient(true);
     fetchMessages();
     fetchComments();
+    fetchWhatsAppMessages();
     
     // Track tab visibility for smart polling
     const handleVisibilityChange = () => {
@@ -75,11 +93,12 @@ export default function Home() {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Set up auto-refresh every 3 seconds for new messages and comments (only when tab is active)
+    // Set up auto-refresh every 3 seconds for new messages, comments, and WhatsApp (only when tab is active)
     const interval = setInterval(() => {
       if (isTabActive) {
         fetchMessages();
         fetchComments();
+        fetchWhatsAppMessages();
       }
     }, 3000); // 3 seconds
     
@@ -95,12 +114,15 @@ export default function Home() {
     // Count unread comments (comments that haven't been replied to)
     const unreadComments = comments.filter(c => !c.parentCommentId && !c.isReplied).length
     
+    // Count unread WhatsApp messages (messages from customers that haven't been read)
+    const unreadWhatsApp = whatsappMessages.filter(m => !m.isRead && !m.isFromBusiness).length
+    
     return {
       'instagram-comment': unreadComments,
       'instagram-dm': messages.filter(m => !m.isRead).length,
-      'whatsapp': 0, // Placeholder
+      'whatsapp': unreadWhatsApp,
     }
-  }, [messages, comments])
+  }, [messages, comments, whatsappMessages])
 
   // Handle platform change
   const handlePlatformChange = (platform: Platform | 'all') => {
@@ -177,6 +199,11 @@ export default function Home() {
             /* Instagram Comments Interface */
             <div className="flex-1">
               <CommentsContent />
+            </div>
+          ) : selectedPlatform === 'whatsapp' ? (
+            /* WhatsApp Interface */
+            <div className="flex-1">
+              <WhatsAppContent />
             </div>
           ) : (
             /* Instagram DM Interface */
