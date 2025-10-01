@@ -2,13 +2,21 @@
 
 import { useState } from 'react';
 
+interface InstagramMessage {
+  id: string;
+  text: string;
+  senderId: string;
+  timestamp: string;
+}
+
 interface ReplyFormProps {
   recipientId: string;
   conversationId: string;
+  replyToMessage?: InstagramMessage | null;
   onReplySuccess?: () => void;
 }
 
-export default function ReplyForm({ recipientId, conversationId, onReplySuccess }: ReplyFormProps) {
+export default function ReplyForm({ recipientId, conversationId, replyToMessage, onReplySuccess }: ReplyFormProps) {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +45,8 @@ export default function ReplyForm({ recipientId, conversationId, onReplySuccess 
         body: JSON.stringify({
           recipientId,
           message: message.trim(),
-          conversationId
+          conversationId,
+          replyToId: replyToMessage?.id || null
         }),
       });
 

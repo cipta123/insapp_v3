@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Filter, MoreVertical } from 'lucide-react'
 import { Platform } from '@/types'
 
@@ -20,16 +20,92 @@ interface InstagramMessage {
 import { formatTime, getPlatformColor, getPlatformName } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
+// Get user display name with cache integration
+const getUserDisplayName = (userId: string, userCache: {[key: string]: any}) => {
+  // Hardcoded business account
+  if (userId === '17841404217906448') {
+    return 'Customer Service Bot';
+  }
+  
+  // Check cache for real Instagram names
+  if (userCache[userId]) {
+    return userCache[userId].displayName;
+  }
+  
+  // Fallback while loading
+  return `User ${userId.slice(-4)}`;
+};
+
 interface MessageListProps {
   messages: InstagramMessage[]
   selectedConversationId: string | null
   onMessageSelect: (message: InstagramMessage) => void
   selectedPlatform: Platform | 'all'
+  onRefreshMessages?: () => void // Add refresh callback
 }
 
-export default function MessageList({ messages, selectedConversationId, onMessageSelect, selectedPlatform }: MessageListProps) {
+export default function MessageList({ messages, selectedConversationId, onMessageSelect, selectedPlatform, onRefreshMessages }: MessageListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'read' | 'unread'>('all')
+  const [userCache, setUserCache] = useState<{[key: string]: any}>({})
+
+  // Fetch user cache on component mount
+  useEffect(() => {
+    fetchUserCache()
+  }, [])
+
+  const fetchUserCache = async () => {
+    try {
+      const response = await fetch('/api/users')
+      if (response.ok) {
+        const userData = await response.json()
+        setUserCache(userData)
+      }
+    } catch (error) {
+      console.error('Failed to fetch user cache:', error)
+    }
+  }
+
+  const markAsRead = async (conversationId: string) => {
+    try {
+      console.log('📖 CLIENT: Marking conversation as read:', conversationId)
+      const response = await fetch('/api/messages/read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ conversationId })
+      })
+
+      console.log('📖 CLIENT: Mark read response status:', response.status)
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log(`📖 CLIENT: Marked ${result.updatedCount} messages as read`)
+        
+        // Refresh messages to update UI
+        if (onRefreshMessages) {
+          console.log('🔄 CLIENT: Refreshing messages...')
+          onRefreshMessages()
+        } else {
+          console.log('⚠️ CLIENT: No refresh callback provided')
+        }
+      } else {
+        const error = await response.text()
+        console.error('❌ CLIENT: Mark read failed:', error)
+      }
+    } catch (error) {
+      console.error('💥 CLIENT: Failed to mark as read:', error)
+    }
+  }
+
+  const handleMessageSelect = (message: InstagramMessage) => {
+    // Mark conversation as read when selected
+    markAsRead(message.conversationId)
+    
+    // Call original onMessageSelect
+    onMessageSelect(message)
+  }
 
   const filteredMessages = messages.filter(message => {
     const matchesSearch = message.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,7 +193,7 @@ export default function MessageList({ messages, selectedConversationId, onMessag
             {filteredMessages.map((message) => (
               <div
                 key={message.id}
-                onClick={() => onMessageSelect(message)}
+                onClick={() => handleMessageSelect(message)}
                 className={cn(
                   "p-4 cursor-pointer transition-colors hover:bg-gray-50",
                   selectedConversationId === message.conversationId && "bg-blue-50 border-r-2 border-blue-500"
@@ -128,7 +204,7 @@ export default function MessageList({ messages, selectedConversationId, onMessag
                   <div className="flex-shrink-0">
                     <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-gray-600">
-                        {message.senderId.charAt(0).toUpperCase()}
+                        {getUserDisplayName(message.senderId, userCache).charAt(0).toUpperCase()}
                       </span>
                     </div>
                   </div>
@@ -138,7 +214,7 @@ export default function MessageList({ messages, selectedConversationId, onMessag
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
                         <h3 className="text-sm font-medium text-gray-900 truncate">
-                          {message.senderId} {/* Displaying ID for now */}
+                          {getUserDisplayName(message.senderId, userCache)}
                         </h3>
                         <span className={cn(
                           "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
@@ -148,9 +224,18 @@ export default function MessageList({ messages, selectedConversationId, onMessag
                           {getPlatformName('instagram-dm')}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-500">
-                        {formatTime(new Date(message.timestamp))}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">
+                          {formatTime(new Date(message.timestamp))}
+                        </span>
+                        {!message.isRead && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full" title={`Unread message: ${message.id}`}></div>
+                        )}
+                        {/* Debug info */}
+                        <span className="text-xs text-red-500 ml-1">
+                          {message.isRead ? 'R' : 'U'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Content */}

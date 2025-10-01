@@ -5,6 +5,68 @@ import crypto from 'crypto';
 const VERIFY_TOKEN = process.env.MESSENGER_VERIFY_TOKEN;
 const APP_SECRET = process.env.APP_SECRET;
 
+// Function to ensure user info is cached
+async function ensureUserInfo(userId: string) {
+  try {
+    // Skip if it's our business account
+    if (userId === '17841404217906448') {
+      return;
+    }
+
+    // Check if user already exists and was fetched recently (within 24 hours)
+    const existingUser = await prisma.instagramUser.findUnique({
+      where: { id: userId }
+    });
+
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    if (existingUser && existingUser.lastFetched > oneDayAgo) {
+      console.log('👤 User info already cached:', userId);
+      return;
+    }
+
+    console.log('🔍 Fetching user info for:', userId);
+
+    // Fetch from Instagram Graph API
+    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+    if (!accessToken) {
+      console.error('❌ Instagram access token not configured');
+      return;
+    }
+
+    const instagramResponse = await fetch(
+      `https://graph.instagram.com/v18.0/${userId}?fields=name,username&access_token=${accessToken}`
+    );
+
+    if (instagramResponse.ok) {
+      const userData = await instagramResponse.json();
+      console.log('✅ User data fetched:', userData);
+
+      // Save/update user data
+      await prisma.instagramUser.upsert({
+        where: { id: userId },
+        update: {
+          name: userData.name || null,
+          username: userData.username || null,
+          lastFetched: new Date()
+        },
+        create: {
+          id: userId,
+          name: userData.name || null,
+          username: userData.username || null,
+          lastFetched: new Date()
+        }
+      });
+
+      console.log('💾 User info saved to database');
+    } else {
+      console.error('❌ Failed to fetch user info:', instagramResponse.status);
+    }
+
+  } catch (error) {
+    console.error('💥 Error in ensureUserInfo:', error);
+  }
+}
+
 /**
  * Handles webhook verification for the Instagram Graph API.
  */
@@ -102,6 +164,9 @@ export async function POST(req: NextRequest) {
                 },
               });
               console.log('✅ Message saved to database');
+
+              // Auto-fetch user info if not exists
+              await ensureUserInfo(event.sender.id);
             }
           }
         }

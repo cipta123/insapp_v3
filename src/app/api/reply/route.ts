@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-
 export async function POST(request: NextRequest) {
   try {
     console.log('🔥 REPLY_API: Function called!');
     
     const body = await request.json();
-    const { recipientId, message, conversationId } = body;
+    const { recipientId, message, conversationId, replyToId } = body;
     
-    console.log('REPLY_API: Request data:', { recipientId, message, conversationId });
+    console.log('REPLY_API: Request data:', { recipientId, message, conversationId, replyToId });
     
     // Validasi input
     if (!recipientId || !message) {
@@ -53,13 +52,37 @@ export async function POST(request: NextRequest) {
     const INSTAGRAM_API_URL = `${BASE_URL}/${API_VERSION}/${BUSINESS_ACCOUNT_ID}/messages`;
     console.log('REPLY_API: API URL:', INSTAGRAM_API_URL);
     
+    // Format message with reply context if replying to specific message
+    let finalMessage = message;
+    if (replyToId) {
+      try {
+        const prisma = new PrismaClient();
+        const originalMessage = await prisma.instagramMessage.findUnique({
+          where: { id: replyToId }
+        });
+        
+        if (originalMessage) {
+          // Add context to the message (Instagram will show this as regular text)
+          const preview = originalMessage.text.length > 30 
+            ? originalMessage.text.substring(0, 30) + '...' 
+            : originalMessage.text;
+          finalMessage = `Re: "${preview}"\n\n${message}`;
+          console.log('REPLY_API: Added reply context to message');
+        }
+        await prisma.$disconnect();
+      } catch (error) {
+        console.error('REPLY_API: Error fetching original message:', error);
+        // Continue with original message if context fetch fails
+      }
+    }
+    
     // Payload untuk Instagram API
     const payload = {
       recipient: {
         id: recipientId
       },
       message: {
-        text: message
+        text: finalMessage
       }
     };
     
@@ -141,7 +164,7 @@ export async function POST(request: NextRequest) {
           conversationId: standardizedConversationId, // Use standardized format
           senderId: businessId,
           recipientId: recipientId,
-          text: message,
+          text: finalMessage, // Save the message with context
           timestamp: new Date(),
           isRead: true, // Our own replies are considered "read"
         }

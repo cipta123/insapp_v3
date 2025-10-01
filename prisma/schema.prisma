@@ -16,10 +16,25 @@ model InstagramMessage {
   conversationId String
   senderId       String
   recipientId    String
-  text           String   @db.Text
+  text           String   @db.Text  // Back to required text field
   timestamp      DateTime
   isRead         Boolean  @default(false)
+  
+  // Reply functionality
+  replyToId      String?  // ID of the message being replied to
+  replyTo        InstagramMessage? @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies        InstagramMessage[] @relation("MessageReplies")
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InstagramUser {
+  id           String   @id // Instagram User ID
+  username     String?  // Instagram username (@username)
+  name         String?  // Display name
+  lastFetched  DateTime @default(now())
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

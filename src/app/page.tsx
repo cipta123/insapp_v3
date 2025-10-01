@@ -28,6 +28,7 @@ export default function Home() {
   const [messages, setMessages] = useState<InstagramMessage[]>([])
   const [isTabActive, setIsTabActive] = useState(true)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [isClient, setIsClient] = useState(false)
 
   const fetchMessages = async () => {
     try {
@@ -46,6 +47,7 @@ export default function Home() {
   };
 
   useEffect(() => {
+    setIsClient(true);
     fetchMessages();
     
     // Track tab visibility for smart polling
@@ -142,7 +144,7 @@ export default function Home() {
             <StatsCards stats={stats} />
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <div className={`w-2 h-2 rounded-full ${isTabActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-              <span>Last update: {lastRefresh.toLocaleTimeString()}</span>
+              <span>Last update: {isClient ? lastRefresh.toLocaleTimeString() : 'Loading...'}</span>
             </div>
           </div>
         </div>
@@ -155,6 +157,7 @@ export default function Home() {
             selectedConversationId={selectedConversationId}
             onMessageSelect={handleMessageSelect}
             selectedPlatform={selectedPlatform}
+            onRefreshMessages={fetchMessages}
           />
 
           {/* Message Detail */}

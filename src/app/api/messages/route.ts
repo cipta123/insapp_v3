@@ -17,7 +17,6 @@ export async function GET() {
     console.log('API_MESSAGES: Creating fresh database connection...');
     await freshPrisma.$connect();
     
-    // Force a raw query to bypass any potential caching
     console.log('API_MESSAGES: Executing raw count query...');
     const countResult = await freshPrisma.$queryRaw`SELECT COUNT(*) as count FROM InstagramMessage`;
     console.log('API_MESSAGES: Raw count result:', countResult);
@@ -25,14 +24,13 @@ export async function GET() {
     console.log('API_MESSAGES: Fetching messages from database...');
     const messages = await freshPrisma.instagramMessage.findMany({
       orderBy: {
-        timestamp: 'desc',
-      },
+        timestamp: 'desc'
+      }
     });
     
     console.log(`API_MESSAGES: Found ${messages.length} messages.`);
     if (messages.length > 0) {
       console.log(`API_MESSAGES: Latest message text: ${messages[0].text}`);
-      console.log(`API_MESSAGES: Latest message timestamp: ${messages[0].timestamp}`);
     }
     
     return NextResponse.json(messages);
