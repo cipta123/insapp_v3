@@ -15,67 +15,39 @@ export async function GET(request: NextRequest) {
     
     console.log('📥 WATZAP_MEDIA: Downloading media:', mediaName)
     
-    // Try to download media from Watzap.id
-    // Note: This is a guess at the API endpoint - need to check actual Watzap.id docs
-    try {
-      const mediaResponse = await axios({
-        method: 'post',
-        url: 'https://api.watzap.id/v1/download_media', // This might be the correct endpoint
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        data: {
-          api_key: process.env.WATZAP_API_KEY,
-          number_key: process.env.WATZAP_NUMBER_KEY,
-          media_name: mediaName
-        },
-        responseType: 'arraybuffer' // For binary data
-      })
-      
-      // Return the media file
-      return new NextResponse(mediaResponse.data, {
-        headers: {
-          'Content-Type': mediaResponse.headers['content-type'] || 'image/jpeg',
-          'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
-        }
-      })
-      
-    } catch (apiError) {
-      console.log('⚠️ WATZAP_MEDIA: API download failed, trying direct URL approach')
-      
-      // Alternative: Try to construct direct URL (if Watzap.id provides direct URLs)
-      const directUrl = `https://api.watzap.id/media/${mediaName}` // This is a guess
-      
-      try {
-        const directResponse = await axios({
-          method: 'get',
-          url: directUrl,
-          responseType: 'arraybuffer'
-        })
-        
-        return new NextResponse(directResponse.data, {
-          headers: {
-            'Content-Type': directResponse.headers['content-type'] || 'image/jpeg',
-            'Cache-Control': 'public, max-age=3600'
-          }
-        })
-        
-      } catch (directError) {
-        console.error('❌ WATZAP_MEDIA: Both API and direct URL failed')
-        
-        // Return placeholder image
-        return NextResponse.json({
-          error: 'Media not available',
-          placeholder: true,
-          mediaName
-        }, { status: 404 })
+    // For now, return a placeholder image since we don't have the correct Watzap.id media download endpoint
+    // In a real implementation, you would need to:
+    // 1. Check Watzap.id documentation for correct media download endpoint
+    // 2. Or store media files locally when received via webhook
+    // 3. Or use a different approach to handle media
+    
+    // Return a placeholder SVG image
+    const placeholderSvg = `
+      <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f3f4f6"/>
+        <text x="50%" y="40%" text-anchor="middle" font-family="Arial" font-size="16" fill="#6b7280">
+          WhatsApp Image
+        </text>
+        <text x="50%" y="60%" text-anchor="middle" font-family="Arial" font-size="12" fill="#9ca3af">
+          ${mediaName}
+        </text>
+        <text x="50%" y="80%" text-anchor="middle" font-family="Arial" font-size="10" fill="#d1d5db">
+          Media download not available
+        </text>
+      </svg>
+    `;
+    
+    return new NextResponse(placeholderSvg, {
+      headers: {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
       }
-    }
+    })
     
   } catch (error) {
-    console.error('❌ WATZAP_MEDIA: Error downloading media:', error)
+    console.error('❌ WATZAP_MEDIA: Error:', error)
     return NextResponse.json(
-      { error: 'Failed to download media' },
+      { error: 'Failed to process media request' },
       { status: 500 }
     )
   }
