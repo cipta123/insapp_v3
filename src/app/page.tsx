@@ -26,6 +26,8 @@ export default function Home() {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'all'>('all')
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<InstagramMessage[]>([])
+  const [isTabActive, setIsTabActive] = useState(true)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
   const fetchMessages = async () => {
     try {
@@ -36,6 +38,7 @@ export default function Home() {
       }
       const data = await response.json();
       setMessages(data);
+      setLastRefresh(new Date());
       console.log('📱 Messages refreshed:', data.length, 'messages');
     } catch (error) {
       console.error('❌ Failed to refresh messages:', error);
@@ -44,7 +47,27 @@ export default function Home() {
 
   useEffect(() => {
     fetchMessages();
-  }, []);
+    
+    // Track tab visibility for smart polling
+    const handleVisibilityChange = () => {
+      setIsTabActive(!document.hidden);
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Set up auto-refresh every 3 seconds for new messages (only when tab is active)
+    const interval = setInterval(() => {
+      if (isTabActive) {
+        fetchMessages();
+      }
+    }, 3000); // 3 seconds
+    
+    // Cleanup on component unmount
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isTabActive]);
 
   // Calculate unread counts for each platform
   const unreadCounts = useMemo(() => {
@@ -115,7 +138,13 @@ export default function Home() {
       <div className="flex-1 flex flex-col">
         {/* Stats Cards */}
         <div className="p-6 bg-gray-50">
-          <StatsCards stats={stats} />
+          <div className="flex justify-between items-center mb-4">
+            <StatsCards stats={stats} />
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className={`w-2 h-2 rounded-full ${isTabActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+              <span>Last update: {lastRefresh.toLocaleTimeString()}</span>
+            </div>
+          </div>
         </div>
 
         {/* Messages Area */}
