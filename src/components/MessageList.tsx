@@ -2,29 +2,51 @@
 
 import { useState } from 'react'
 import { Search, Filter, MoreVertical } from 'lucide-react'
-import { Message, Platform } from '@/types'
+import { Platform } from '@/types'
+
+// This should match the type in page.tsx
+interface InstagramMessage {
+  id: string;
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  recipientId: string;
+  text: string;
+  timestamp: string; // Comes as string from JSON
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 import { formatTime, getPlatformColor, getPlatformName } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 interface MessageListProps {
-  messages: Message[]
-  selectedMessage: Message | null
-  onMessageSelect: (message: Message) => void
+  messages: InstagramMessage[]
+  selectedConversationId: string | null
+  onMessageSelect: (message: InstagramMessage) => void
   selectedPlatform: Platform | 'all'
 }
 
-export default function MessageList({ messages, selectedMessage, onMessageSelect, selectedPlatform }: MessageListProps) {
+export default function MessageList({ messages, selectedConversationId, onMessageSelect, selectedPlatform }: MessageListProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'unread' | 'read' | 'replied'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'read' | 'unread'>('all')
 
   const filteredMessages = messages.filter(message => {
-    const matchesSearch = message.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         message.sender.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || message.status === statusFilter
-    const matchesPlatform = selectedPlatform === 'all' || message.platform === selectedPlatform
+    const matchesSearch = message.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         message.senderId.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesSearch && matchesStatus && matchesPlatform
-  })
+    let matchesStatus = true;
+    if (statusFilter === 'read') {
+      matchesStatus = message.isRead;
+    } else if (statusFilter === 'unread') {
+      matchesStatus = !message.isRead;
+    }
+
+    // Platform filter is disabled for now as we only have Instagram DMs
+    const matchesPlatform = true;
+    
+    return matchesSearch && matchesStatus && matchesPlatform;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -80,7 +102,6 @@ export default function MessageList({ messages, selectedMessage, onMessageSelect
             <option value="all">Semua Status</option>
             <option value="unread">Belum Dibaca</option>
             <option value="read">Sudah Dibaca</option>
-            <option value="replied">Sudah Dibalas</option>
           </select>
         </div>
       </div>
@@ -99,25 +120,17 @@ export default function MessageList({ messages, selectedMessage, onMessageSelect
                 onClick={() => onMessageSelect(message)}
                 className={cn(
                   "p-4 cursor-pointer transition-colors hover:bg-gray-50",
-                  selectedMessage?.id === message.id && "bg-blue-50 border-r-2 border-blue-500"
+                  selectedConversationId === message.conversationId && "bg-blue-50 border-r-2 border-blue-500"
                 )}
               >
                 <div className="flex items-start space-x-3">
                   {/* Avatar */}
                   <div className="flex-shrink-0">
-                    {message.sender.avatar ? (
-                      <img
-                        src={message.sender.avatar}
-                        alt={message.sender.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-600">
-                          {message.sender.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-gray-600">
+                        {message.senderId.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -125,47 +138,34 @@ export default function MessageList({ messages, selectedMessage, onMessageSelect
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
                         <h3 className="text-sm font-medium text-gray-900 truncate">
-                          {message.sender.name}
+                          {message.senderId} {/* Displaying ID for now */}
                         </h3>
                         <span className={cn(
                           "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                          getPlatformColor(message.platform),
+                          getPlatformColor('instagram-dm'),
                           "text-white"
                         )}>
-                          {getPlatformName(message.platform)}
+                          {getPlatformName('instagram-dm')}
                         </span>
                       </div>
                       <span className="text-xs text-gray-500">
-                        {formatTime(message.timestamp)}
+                        {formatTime(new Date(message.timestamp))}
                       </span>
                     </div>
 
                     {/* Content */}
                     <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                      {message.content}
+                      {message.text}
                     </p>
 
-                    {/* Post Image for Instagram Comments */}
-                    {message.platform === 'instagram-comment' && message.postImage && (
-                      <div className="mb-2">
-                        <img
-                          src={message.postImage}
-                          alt="Post"
-                          className="w-16 h-16 rounded object-cover"
-                        />
-                      </div>
-                    )}
 
                     {/* Status */}
                     <div className="flex items-center justify-between">
                       <span className={cn(
                         "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                        getStatusColor(message.status)
+                        message.isRead ? getStatusColor('read') : getStatusColor('unread')
                       )}>
-                        {getStatusText(message.status)}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {message.sender.username}
+                        {message.isRead ? getStatusText('read') : getStatusText('unread')}
                       </span>
                     </div>
                   </div>

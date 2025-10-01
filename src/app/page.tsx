@@ -1,98 +1,106 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Sidebar from '@/components/Sidebar'
 import StatsCards from '@/components/StatsCards'
 import MessageList from '@/components/MessageList'
 import MessageDetail from '@/components/MessageDetail'
-import { mockMessages, quickReplies, stats } from '@/data/mockData'
-import { Message, Platform, Reply } from '@/types'
+import { quickReplies, stats } from '@/data/mockData'
+import { Platform, Reply } from '@/types'
+
+// Define a type that matches our Prisma model
+interface InstagramMessage {
+  id: string;
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  recipientId: string;
+  text: string;
+  timestamp: string; // Comes as string from JSON
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function Home() {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'all'>('all')
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-  const [messages, setMessages] = useState(mockMessages)
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const [messages, setMessages] = useState<InstagramMessage[]>([])
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/messages`;
+        const response = await fetch(apiUrl, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error('Failed to fetch messages');
+        }
+        const data = await response.json();
+        setMessages(data);
+      } catch (error) {
+        console.error(error);
+        // Handle error (e.g., show a notification to the user)
+      }
+    };
+
+    fetchMessages();
+  }, []);
 
   // Calculate unread counts for each platform
   const unreadCounts = useMemo(() => {
     return {
-      'instagram-comment': messages.filter(m => m.platform === 'instagram-comment' && m.status === 'unread').length,
-      'instagram-dm': messages.filter(m => m.platform === 'instagram-dm' && m.status === 'unread').length,
-      'whatsapp': messages.filter(m => m.platform === 'whatsapp' && m.status === 'unread').length,
+      'instagram-comment': 0, // Placeholder
+      'instagram-dm': messages.filter(m => !m.isRead).length,
+      'whatsapp': 0, // Placeholder
     }
   }, [messages])
 
   // Handle platform change
   const handlePlatformChange = (platform: Platform | 'all') => {
     setSelectedPlatform(platform)
-    setSelectedMessage(null) // Clear selected message when changing platform
+    setSelectedConversationId(null) // Clear selected conversation when changing platform
   }
 
   // Handle message selection
-  const handleMessageSelect = (message: Message) => {
-    setSelectedMessage(message)
+  const handleMessageSelect = (message: InstagramMessage) => {
+    setSelectedConversationId(message.conversationId)
     
-    // Mark message as read if it was unread
-    if (message.status === 'unread') {
-      setMessages(prev => 
-        prev.map(m => 
-          m.id === message.id 
-            ? { ...m, status: 'read' as const }
-            : m
-        )
+    // Mark all messages in this conversation as read
+    // TODO: We should also update this on the backend
+    setMessages(prev => 
+      prev.map(m => 
+        m.conversationId === message.conversationId
+          ? { ...m, isRead: true }
+          : m
       )
-    }
+    )
   }
 
   // Handle sending reply
   const handleSendReply = (messageId: string, reply: string) => {
-    const newReply: Reply = {
-      id: `reply_${Date.now()}`,
-      content: reply,
-      timestamp: new Date(),
-      sender: 'agent'
-    }
-
-    // Update message with new reply and status
-    setMessages(prev => 
-      prev.map(m => 
-        m.id === messageId 
-          ? { 
-              ...m, 
-              status: 'replied' as const,
-              replies: [...(m.replies || []), newReply]
-            }
-          : m
-      )
-    )
-
-    // Update selected message to show the new reply immediately
-    setSelectedMessage(prev => 
-      prev?.id === messageId 
-        ? {
-            ...prev,
-            status: 'replied' as const,
-            replies: [...(prev.replies || []), newReply]
-          }
-        : prev
-    )
-
-    // In a real app, you would send the reply to the backend here
-    console.log('Sending reply:', { messageId, reply, newReply })
-    
-    // Show success message (you could add a toast notification here)
-    alert('Balasan berhasil dikirim!')
+    // This functionality needs to be connected to the Instagram API
+    // For now, we'll just log it.
+    console.log('Replying to message:', { messageId, reply });
+    alert('Fungsi balas belum terhubung ke API Instagram.');
   }
 
   // Filter messages based on selected platform
-  const filteredMessages = selectedPlatform === 'all' 
-    ? messages 
-    : messages.filter(m => m.platform === selectedPlatform)
+  // Group messages by conversationId, showing only the latest message for each conversation.
+  const conversationList = useMemo(() => {
+    const conversations = new Map<string, InstagramMessage>();
+    messages.forEach(message => {
+      const existing = conversations.get(message.conversationId);
+      if (!existing || new Date(message.timestamp) > new Date(existing.timestamp)) {
+        conversations.set(message.conversationId, message);
+      }
+    });
+    return Array.from(conversations.values());
+  }, [messages]);
 
-  // Sort messages by timestamp (newest first)
-  const sortedMessages = [...filteredMessages].sort((a, b) => 
+  // Sort conversations by the timestamp of their latest message
+  const sortedMessages = [...conversationList].sort((a, b) => 
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  )
+  );
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -115,14 +123,15 @@ export default function Home() {
           {/* Message List */}
           <MessageList
             messages={sortedMessages}
-            selectedMessage={selectedMessage}
+            selectedConversationId={selectedConversationId}
             onMessageSelect={handleMessageSelect}
             selectedPlatform={selectedPlatform}
           />
 
           {/* Message Detail */}
           <MessageDetail
-            message={selectedMessage}
+            conversationId={selectedConversationId}
+            messages={messages.filter(m => m.conversationId === selectedConversationId)}
             quickReplies={quickReplies}
             onSendReply={handleSendReply}
           />

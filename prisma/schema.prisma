@@ -1,0 +1,25 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model InstagramMessage {
+  id             String   @id @default(cuid())
+  messageId      String   @unique
+  conversationId String
+  senderId       String
+  recipientId    String
+  text           String   @db.Text
+  timestamp      DateTime
+  isRead         Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

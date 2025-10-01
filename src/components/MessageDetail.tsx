@@ -2,21 +2,36 @@
 
 import { useState } from 'react'
 import { Send, Smile, Paperclip, MoreVertical, Clock, CheckCircle } from 'lucide-react'
-import { Message, QuickReply, Reply } from '@/types'
+import { QuickReply } from '@/types'
+
+// This should match the type in page.tsx
+interface InstagramMessage {
+  id: string;
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  recipientId: string;
+  text: string;
+  timestamp: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 import { formatTime, getPlatformColor, getPlatformName } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 interface MessageDetailProps {
-  message: Message | null
-  quickReplies: QuickReply[]
-  onSendReply: (messageId: string, reply: string) => void
+  conversationId: string | null;
+  messages: InstagramMessage[];
+  quickReplies: QuickReply[];
+  onSendReply: (messageId: string, reply: string) => void;
 }
 
-export default function MessageDetail({ message, quickReplies, onSendReply }: MessageDetailProps) {
+export default function MessageDetail({ conversationId, messages, quickReplies, onSendReply }: MessageDetailProps) {
   const [replyText, setReplyText] = useState('')
   const [showQuickReplies, setShowQuickReplies] = useState(false)
 
-  if (!message) {
+  if (!conversationId || messages.length === 0) {
     return (
       <div className="w-1/2 bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -31,12 +46,14 @@ export default function MessageDetail({ message, quickReplies, onSendReply }: Me
   }
 
   const handleSendReply = () => {
-    if (replyText.trim()) {
-      onSendReply(message.id, replyText)
-      setReplyText('')
-      setShowQuickReplies(false)
+    if (replyText.trim() && conversationId) {
+      // We need the recipient's ID to reply. We can get it from the last message.
+      const lastMessage = messages[messages.length - 1];
+      onSendReply(lastMessage.senderId, replyText); // The sender of the last message is our recipient
+      setReplyText('');
+      setShowQuickReplies(false);
     }
-  }
+  };
 
   const handleQuickReply = (reply: QuickReply) => {
     setReplyText(reply.content)
@@ -67,120 +84,46 @@ export default function MessageDetail({ message, quickReplies, onSendReply }: Me
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            {/* Avatar */}
-            {message.sender.avatar ? (
-              <img
-                src={message.sender.avatar}
-                alt={message.sender.name}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-lg font-medium text-gray-600">
-                  {message.sender.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-
+            <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+              <span className="text-lg font-medium text-gray-600">
+                {messages[0].senderId.charAt(0).toUpperCase()}
+              </span>
+            </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">{message.sender.name}</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{messages[0].senderId}</h2>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">{message.sender.username}</span>
                 <span className={cn(
                   "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                  getPlatformColor(message.platform),
+                  getPlatformColor('instagram-dm'),
                   "text-white"
                 )}>
-                  {getPlatformName(message.platform)}
+                  {getPlatformName('instagram-dm')}
                 </span>
               </div>
             </div>
           </div>
-
           <button className="p-2 text-gray-400 hover:text-gray-600">
             <MoreVertical className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      {/* Message Content */}
+      {/* Conversation History */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="space-y-6">
-          {/* Message */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                {getStatusIcon(message.status)}
-                <span className="text-sm font-medium text-gray-700">
-                  {getStatusText(message.status)}
+        <div className="space-y-4">
+          {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(msg => (
+            <div key={msg.id} className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-gray-700">{msg.senderId}</span>
+                </div>
+                <span className="text-sm text-gray-500">
+                  {formatTime(new Date(msg.timestamp))}
                 </span>
               </div>
-              <span className="text-sm text-gray-500">
-                {formatTime(message.timestamp)}
-              </span>
+              <p className="text-gray-900 leading-relaxed">{msg.text}</p>
             </div>
-
-            <p className="text-gray-900 leading-relaxed">{message.content}</p>
-
-            {/* Post Image for Instagram Comments */}
-            {message.platform === 'instagram-comment' && message.postImage && (
-              <div className="mt-4">
-                <p className="text-sm text-gray-600 mb-2">Komentar pada post:</p>
-                <img
-                  src={message.postImage}
-                  alt="Post"
-                  className="w-32 h-32 rounded-lg object-cover"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Conversation History */}
-          {message.replies && message.replies.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium text-gray-700 border-b border-gray-200 pb-2">
-                Riwayat Percakapan
-              </h4>
-              {message.replies.map((reply) => (
-                <div
-                  key={reply.id}
-                  className={cn(
-                    "rounded-lg p-4",
-                    reply.sender === 'agent' 
-                      ? "bg-blue-50 ml-4" 
-                      : "bg-gray-50 mr-4"
-                  )}
-                >
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center",
-                      reply.sender === 'agent' 
-                        ? "bg-blue-500" 
-                        : "bg-gray-400"
-                    )}>
-                      <span className="text-xs text-white font-medium">
-                        {reply.sender === 'agent' ? 'CS' : message.sender.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <span className={cn(
-                      "text-sm font-medium",
-                      reply.sender === 'agent' 
-                        ? "text-blue-700" 
-                        : "text-gray-700"
-                    )}>
-                      {reply.sender === 'agent' ? 'Customer Service' : message.sender.name}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {formatTime(reply.timestamp)}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 leading-relaxed">
-                    {reply.content}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
