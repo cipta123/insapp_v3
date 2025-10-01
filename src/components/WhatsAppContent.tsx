@@ -34,6 +34,7 @@ export default function WhatsAppContent() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [userInteracting, setUserInteracting] = useState(false)
+  const [scrollPosition, setScrollPosition] = useState(0)
 
   const fetchMessages = async () => {
     try {
@@ -60,13 +61,18 @@ export default function WhatsAppContent() {
         const contactsList = Array.from(contactMap.values())
         setContacts(contactsList)
         
-        // Auto-select first contact if none selected (only if not user interacting)
-        if (!selectedContact && contactsList.length > 0 && !userInteracting) {
+        // Auto-select first contact if none selected (only if not user interacting and not sending)
+        if (!selectedContact && contactsList.length > 0 && !userInteracting && !sending) {
           const firstContact = contactsList[0]
+          console.log('🎯 AUTO_SELECT: Auto-selecting first contact:', firstContact.id)
           setSelectedContact(firstContact)
-          // Mark messages as read for auto-selected contact
-          markContactMessagesAsRead(firstContact.id)
-          console.log('🎯 AUTO_SELECT: Selected first contact and marking messages as read:', firstContact.id)
+          
+          // Mark messages as read for auto-selected contact (with delay)
+          setTimeout(() => {
+            markContactMessagesAsRead(firstContact.id)
+          }, 500)
+          
+          console.log('🎯 AUTO_SELECT: Selected first contact:', firstContact.id)
         }
         
         setLoading(false)
@@ -80,17 +86,18 @@ export default function WhatsAppContent() {
   useEffect(() => {
     fetchMessages()
     
-    // Auto-refresh every 3 seconds (but pause during user interaction)
+    // Auto-refresh every 5 seconds (increased interval to reduce conflicts)
     const interval = setInterval(() => {
-      if (!userInteracting) {
+      if (!userInteracting && !sending) {
+        console.log('🔄 WHATSAPP: Auto-refreshing messages...')
         fetchMessages()
       } else {
-        console.log('⏸️ WHATSAPP: Skipping auto-refresh during user interaction')
+        console.log('⏸️ WHATSAPP: Skipping auto-refresh (userInteracting:', userInteracting, 'sending:', sending, ')')
       }
-    }, 3000)
+    }, 5000) // Increased from 3 to 5 seconds
 
     return () => clearInterval(interval)
-  }, [userInteracting])
+  }, [userInteracting, sending])
 
   const markContactMessagesAsRead = async (contactId: string) => {
     try {
@@ -123,20 +130,23 @@ export default function WhatsAppContent() {
   const handleContactSelect = (contact: WhatsAppContact) => {
     console.log('🎯 CONTACT_SELECT: Selecting contact:', contact.id)
     
-    // Prevent auto-refresh during user interaction
+    // Prevent auto-refresh during user interaction for longer period
     setUserInteracting(true)
     
     setSelectedContact(contact)
     
-    // Mark all messages from this contact as read
-    markContactMessagesAsRead(contact.id)
-    
-    // Re-enable auto-refresh after a delay
+    // Mark all messages from this contact as read (async, don't wait)
     setTimeout(() => {
-      setUserInteracting(false)
-    }, 2000) // 2 seconds pause
+      markContactMessagesAsRead(contact.id)
+    }, 100) // Small delay to ensure state is set first
     
-    console.log('🎯 CONTACT_SELECT: Selected contact and marking messages as read:', contact.id)
+    // Re-enable auto-refresh after a longer delay
+    setTimeout(() => {
+      console.log('🔄 CONTACT_SELECT: Re-enabling auto-refresh for:', contact.id)
+      setUserInteracting(false)
+    }, 4000) // Increased to 4 seconds pause
+    
+    console.log('🎯 CONTACT_SELECT: Selected contact:', contact.id)
   }
 
   const handleSendReply = async () => {
@@ -226,7 +236,19 @@ export default function WhatsAppContent() {
   return (
     <div className="h-full bg-gray-50 flex">
       {/* Contacts List - WhatsApp Style */}
-      <div className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto">
+      <div 
+        className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto"
+        onScroll={(e) => {
+          if (!userInteracting) {
+            setScrollPosition(e.currentTarget.scrollTop)
+          }
+        }}
+        ref={(el) => {
+          if (el && scrollPosition > 0 && !userInteracting) {
+            el.scrollTop = scrollPosition
+          }
+        }}
+      >
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -327,8 +349,6 @@ export default function WhatsAppContent() {
                           <span className="text-xs font-bold text-white">{unreadCount > 99 ? '99+' : unreadCount}</span>
                         </div>
                       )}
-                      {/* Debug badge - always show unread count for testing */}
-                      <div className="text-xs text-gray-400 ml-1">({unreadCount})</div>
                     </div>
 
                     {/* Last Message Preview */}
