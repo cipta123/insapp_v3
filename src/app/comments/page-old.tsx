@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { MessageCircle, Send, Eye, Clock, User, Reply, ArrowLeft, X, Heart, MessageSquare, Calendar, Image } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { MessageCircle, Send, Eye, Clock, User, Reply, ArrowLeft } from 'lucide-react'
 
 interface InstagramComment {
   id: string;
@@ -32,7 +32,6 @@ interface InstagramPost {
   permalink?: string | null;
   commentCount: number;
   unreadComments: number;
-  timestamp: string;
   latestComment?: InstagramComment | null;
   comments: InstagramComment[];
 }
@@ -45,35 +44,6 @@ export default function CommentsPage() {
   const [replyingTo, setReplyingTo] = useState<InstagramComment | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
-  const isInitialLoad = useRef(true)
-  const previousCommentIds = useRef<Set<string>>(new Set())
-  const userManuallyToggled = useRef<Set<string>>(new Set())
-
-  const fetchPosts = async () => {
-    try {
-      const response = await fetch('/api/posts')
-      if (response.ok) {
-        const data = await response.json()
-        setPosts(data)
-        
-        // Auto-select first post ONLY on initial load
-        if (!selectedPost && data.length > 0 && isInitialLoad.current) {
-          setSelectedPost(data[0])
-          isInitialLoad.current = false
-        }
-        
-        // If a post was selected but got updated, maintain the selection
-        if (selectedPost && data.length > 0) {
-          const updatedSelectedPost = data.find((post: InstagramPost) => post.id === selectedPost.id)
-          if (updatedSelectedPost) {
-            setSelectedPost(updatedSelectedPost)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch posts:', error)
-    }
-  }
 
   // Fetch posts and comments
   useEffect(() => {
@@ -89,34 +59,23 @@ export default function CommentsPage() {
     return () => clearInterval(interval)
   }, [])
 
+  const fetchPosts = async () => {
+    try {
+      const response = await fetch('/api/posts')
+      if (response.ok) {
+        const data = await response.json()
+        setPosts(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch posts:', error)
+    }
+  }
+
   const fetchComments = async () => {
     try {
       const response = await fetch('/api/comments')
       if (response.ok) {
         const data = await response.json()
-        
-        // Only auto-expand for NEW replies, but respect user's manual actions
-        const newExpanded = new Set(expandedComments)
-        const currentCommentIds = new Set<string>(data.map((c: InstagramComment) => c.id))
-        
-        data.forEach((comment: InstagramComment) => {
-          if (comment.parentCommentId && !previousCommentIds.current.has(comment.id)) {
-            // This is a NEW reply, auto-expand its parent ONLY if user hasn't manually toggled it
-            if (!userManuallyToggled.current.has(comment.parentCommentId)) {
-              newExpanded.add(comment.parentCommentId)
-            }
-          }
-        })
-        
-        // Update previous comment IDs for next comparison
-        previousCommentIds.current = currentCommentIds
-        
-        // Only update expanded state if there are actual changes
-        if (newExpanded.size !== expandedComments.size || 
-            !Array.from(newExpanded).every(id => expandedComments.has(id))) {
-          setExpandedComments(newExpanded)
-        }
-        
         setComments(data)
         setLoading(false)
       }
@@ -147,24 +106,12 @@ export default function CommentsPage() {
 
       if (response.ok) {
         console.log('✅ Reply sent successfully')
-        
-        // Auto-expand the parent comment to show the new reply
-        const newExpanded = new Set(expandedComments)
-        newExpanded.add(replyingTo.commentId)
-        setExpandedComments(newExpanded)
-        
         setReplyText('')
         setReplyingTo(null)
-        // Refresh comments to show new reply
-        fetchComments()
         
-        // Auto-scroll to bottom after reply (like chat apps)
-        setTimeout(() => {
-          const chatContainer = document.querySelector('.chat-container')
-          if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight
-          }
-        }, 100)
+        // Refresh data
+        fetchPosts()
+        fetchComments()
       } else {
         console.error('Failed to send reply')
       }
@@ -176,7 +123,8 @@ export default function CommentsPage() {
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
     const now = new Date()
-    const minutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
     
     if (minutes < 1) return 'Baru saja'
     if (minutes < 60) return `${minutes}m`
@@ -185,15 +133,11 @@ export default function CommentsPage() {
   }
 
   const getPostComments = (postId: string) => {
-    return comments
-      .filter(comment => comment.postId === postId && !comment.parentCommentId)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Oldest first (like chat)
+    return comments.filter(comment => comment.postId === postId && !comment.parentCommentId)
   }
 
   const getCommentReplies = (commentId: string) => {
-    return comments
-      .filter(comment => comment.parentCommentId === commentId)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Oldest first (like chat)
+    return comments.filter(comment => comment.parentCommentId === commentId)
   }
 
   const toggleCommentExpansion = (commentId: string) => {
@@ -203,13 +147,10 @@ export default function CommentsPage() {
     } else {
       newExpanded.add(commentId)
     }
-    
-    // Track that user manually toggled this comment
-    userManuallyToggled.current.add(commentId)
     setExpandedComments(newExpanded)
   }
 
-  // Component untuk render single comment dengan replies - DM Style
+  // Component untuk render single comment dengan replies
   const CommentBubble = ({ comment, isReply = false }: { comment: InstagramComment, isReply?: boolean }) => {
     const replies = getCommentReplies(comment.commentId)
     const isExpanded = expandedComments.has(comment.commentId)
@@ -238,7 +179,7 @@ export default function CommentsPage() {
           </div>
         </div>
         
-        {/* Reply Button - Always show for customer comments */}
+        {/* Reply Button */}
         {!isFromBusiness && (
           <div className="flex justify-start mb-2">
             <button
@@ -318,91 +259,51 @@ export default function CommentsPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {posts.map((post) => {
-                  const postComments = comments.filter(c => c.postId === post.postId && !c.parentCommentId)
-                  const totalReplies = comments.filter(c => c.postId === post.postId && c.parentCommentId).length
-                  const latestComment = postComments.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
-                  const hasUnread = postComments.some(c => !c.isReplied)
-                  
-                  return (
-                    <div
-                      key={post.id}
-                      onClick={() => setSelectedPost(post)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-                        selectedPost?.id === post.id
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md'
-                          : 'bg-white border-gray-200 hover:bg-gray-50 hover:shadow-sm'
-                      }`}
-                    >
-                      {/* Post Header */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <div className={`p-2 rounded-lg ${selectedPost?.id === post.id ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                            <Image className={`h-4 w-4 ${selectedPost?.id === post.id ? 'text-blue-600' : 'text-gray-600'}`} />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900 truncate">
-                              {post.caption ? post.caption.slice(0, 40) + '...' : `Post ${post.postId.slice(-6)}`}
-                            </p>
-                            <div className="flex items-center space-x-1 mt-1">
-                              <Calendar className="h-3 w-3 text-gray-400" />
-                              <span className="text-xs text-gray-500">
-                                {formatTime(post.timestamp)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        {hasUnread && (
-                          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                {posts.map((post) => (
+                  <div
+                    key={post.id}
+                    onClick={() => setSelectedPost(post)}
+                    className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                      selectedPost?.id === post.id
+                        ? 'bg-blue-50 border-blue-200'
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          Post {post.postId.slice(-8)}
+                        </p>
+                        {post.caption && (
+                          <p className="text-xs text-gray-600 line-clamp-2 mt-1">
+                            {post.caption}
+                          </p>
                         )}
                       </div>
-
-                      {/* Stats */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-1">
-                            <MessageSquare className="h-3 w-3 text-blue-500" />
-                            <span className="text-xs font-medium text-blue-600">{postComments.length}</span>
-                          </div>
-                          {totalReplies > 0 && (
-                            <div className="flex items-center space-x-1">
-                              <Reply className="h-3 w-3 text-green-500" />
-                              <span className="text-xs font-medium text-green-600">{totalReplies}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          hasUnread 
-                            ? 'bg-red-100 text-red-700' 
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {hasUnread ? 'New' : 'Read'}
-                        </div>
-                      </div>
-
-                      {/* Latest Comment Preview */}
-                      {latestComment && (
-                        <div className="bg-gray-50 rounded-lg p-2 mt-2">
-                          <p className="text-xs text-gray-600 truncate">
-                            <span className="font-medium">{latestComment.username || 'User'}:</span> {latestComment.text.slice(0, 35)}...
-                          </p>
-                          <span className="text-xs text-gray-400">{formatTime(latestComment.timestamp)}</span>
-                        </div>
+                      {post.unreadComments > 0 && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       )}
                     </div>
-                  )
-                })}
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{post.commentCount} comments</span>
+                      {post.latestComment && (
+                        <span>{formatTime(post.latestComment.timestamp)}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Comments Detail - DM Style Chat */}
+        {/* Comments Detail */}
         <div className="flex-1 flex flex-col">
           {selectedPost ? (
             <>
               {/* Post Header */}
-              <div className="bg-white border-b border-gray-200 p-4">
+              <div className="bg-white border-b border-gray-200 p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">
@@ -426,7 +327,7 @@ export default function CommentsPage() {
               </div>
 
               {/* Comments Chat Area - DM Style */}
-              <div className="flex-1 overflow-y-auto p-6 bg-gray-50 chat-container">
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
                 {getPostComments(selectedPost.postId).length === 0 ? (
                   <div className="text-center py-8">
                     <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -453,7 +354,7 @@ export default function CommentsPage() {
                         onClick={() => setReplyingTo(null)}
                         className="text-gray-400 hover:text-gray-600"
                       >
-                        <X className="h-4 w-4" />
+                        <ArrowLeft className="h-4 w-4" />
                       </button>
                     </div>
                     <div className="bg-gray-100 p-2 rounded-lg border-l-2 border-blue-500">
@@ -487,13 +388,79 @@ export default function CommentsPage() {
                   </div>
                 </div>
               )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {comment.isReplied ? (
+                              <span className="text-xs text-green-600 font-medium">
+                                Replied
+                              </span>
+                            ) : (
+                              <span className="text-xs text-blue-600 font-medium">
+                                New
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-gray-800 mb-3">{comment.text}</p>
+                        
+                        <button
+                          onClick={() => setReplyingTo(comment)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Reply
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Reply Form */}
+              {replyingTo && (
+                <div className="bg-white border-t border-gray-200 p-6">
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Replying to <span className="font-medium">{replyingTo.username || `User ${replyingTo.userId.slice(-4)}`}</span>:
+                    </p>
+                    <p className="text-sm text-gray-800 bg-gray-50 p-2 rounded border-l-2 border-blue-500">
+                      {replyingTo.text}
+                    </p>
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <input
+                      type="text"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Type your reply..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && handleReply()}
+                    />
+                    <button
+                      onClick={handleReply}
+                      disabled={!replyText.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      <span>Reply</span>
+                    </button>
+                    <button
+                      onClick={() => setReplyingTo(null)}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center bg-gray-50">
               <div className="text-center">
                 <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Post</h3>
-                <p className="text-gray-500">Choose a post from the left to view and manage comments</p>
+                <p className="text-gray-500">Choose a post from the list to view and manage comments</p>
               </div>
             </div>
           )}
