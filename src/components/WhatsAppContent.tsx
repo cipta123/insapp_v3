@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { MessageCircle, Send, Phone, User, Clock, Check, CheckCheck, Image, FileText, Mic, Video } from 'lucide-react'
 
 interface WhatsAppMessage {
@@ -33,10 +33,8 @@ export default function WhatsAppContent() {
   const [replyText, setReplyText] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [userInteracting, setUserInteracting] = useState(false)
-  const [scrollPosition, setScrollPosition] = useState(0)
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const response = await fetch('/api/whatsapp/messages')
       if (response.ok) {
@@ -61,17 +59,10 @@ export default function WhatsAppContent() {
         const contactsList = Array.from(contactMap.values())
         setContacts(contactsList)
         
-        // Auto-select first contact if none selected (only if not user interacting and not sending)
-        if (!selectedContact && contactsList.length > 0 && !userInteracting && !sending) {
+        // Auto-select first contact if none selected
+        if (!selectedContact && contactsList.length > 0) {
           const firstContact = contactsList[0]
-          console.log('🎯 AUTO_SELECT: Auto-selecting first contact:', firstContact.id)
           setSelectedContact(firstContact)
-          
-          // Mark messages as read for auto-selected contact (with delay)
-          setTimeout(() => {
-            markContactMessagesAsRead(firstContact.id)
-          }, 500)
-          
           console.log('🎯 AUTO_SELECT: Selected first contact:', firstContact.id)
         }
         
@@ -81,23 +72,18 @@ export default function WhatsAppContent() {
       console.error('Failed to fetch WhatsApp messages:', error)
       setLoading(false)
     }
-  }
+  }, [selectedContact])
 
   useEffect(() => {
     fetchMessages()
     
-    // Auto-refresh every 5 seconds (increased interval to reduce conflicts)
-    const interval = setInterval(() => {
-      if (!userInteracting && !sending) {
-        console.log('🔄 WHATSAPP: Auto-refreshing messages...')
-        fetchMessages()
-      } else {
-        console.log('⏸️ WHATSAPP: Skipping auto-refresh (userInteracting:', userInteracting, 'sending:', sending, ')')
-      }
-    }, 5000) // Increased from 3 to 5 seconds
+    // Disable auto-refresh temporarily to fix scroll issue
+    // const interval = setInterval(() => {
+    //   fetchMessages()
+    // }, 3000)
 
-    return () => clearInterval(interval)
-  }, [userInteracting, sending])
+    // return () => clearInterval(interval)
+  }, [fetchMessages])
 
   const markContactMessagesAsRead = async (contactId: string) => {
     try {
@@ -129,24 +115,8 @@ export default function WhatsAppContent() {
 
   const handleContactSelect = (contact: WhatsAppContact) => {
     console.log('🎯 CONTACT_SELECT: Selecting contact:', contact.id)
-    
-    // Prevent auto-refresh during user interaction for longer period
-    setUserInteracting(true)
-    
     setSelectedContact(contact)
-    
-    // Mark all messages from this contact as read (async, don't wait)
-    setTimeout(() => {
-      markContactMessagesAsRead(contact.id)
-    }, 100) // Small delay to ensure state is set first
-    
-    // Re-enable auto-refresh after a longer delay
-    setTimeout(() => {
-      console.log('🔄 CONTACT_SELECT: Re-enabling auto-refresh for:', contact.id)
-      setUserInteracting(false)
-    }, 4000) // Increased to 4 seconds pause
-    
-    console.log('🎯 CONTACT_SELECT: Selected contact:', contact.id)
+    markContactMessagesAsRead(contact.id)
   }
 
   const handleSendReply = async () => {
@@ -236,46 +206,43 @@ export default function WhatsAppContent() {
   return (
     <div className="h-full bg-gray-50 flex">
       {/* Contacts List - WhatsApp Style */}
-      <div 
-        className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto"
-        onScroll={(e) => {
-          if (!userInteracting) {
-            setScrollPosition(e.currentTarget.scrollTop)
-          }
-        }}
-        ref={(el) => {
-          if (el && scrollPosition > 0 && !userInteracting) {
-            el.scrollTop = scrollPosition
-          }
-        }}
-      >
+      <div className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto">
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
               <Phone className="h-5 w-5 mr-2 text-green-600" />
               WhatsApp Chats
             </h2>
-            {/* Debug: Mark all as read button */}
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/mark-all-read', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ platform: 'whatsapp' })
-                  })
-                  if (response.ok) {
-                    console.log('✅ All WhatsApp messages marked as read')
-                    setTimeout(() => fetchMessages(), 500)
+            <div className="flex space-x-2">
+              {/* Manual refresh button */}
+              <button
+                onClick={() => fetchMessages()}
+                className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+              >
+                Refresh
+              </button>
+              {/* Debug: Mark all as read button */}
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/mark-all-read', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ platform: 'whatsapp' })
+                    })
+                    if (response.ok) {
+                      console.log('✅ All WhatsApp messages marked as read')
+                      setTimeout(() => fetchMessages(), 500)
+                    }
+                  } catch (error) {
+                    console.error('❌ Error marking all as read:', error)
                   }
-                } catch (error) {
-                  console.error('❌ Error marking all as read:', error)
-                }
-              }}
-              className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
-            >
-              Mark All Read
-            </button>
+                }}
+                className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+              >
+                Mark All Read
+              </button>
+            </div>
           </div>
           
           {contacts.length === 0 ? (
