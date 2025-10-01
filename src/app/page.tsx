@@ -26,6 +26,7 @@ export default function Home() {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'all'>('all')
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<InstagramMessage[]>([])
+  const [comments, setComments] = useState<any[]>([])
   const [isTabActive, setIsTabActive] = useState(true)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [isClient, setIsClient] = useState(false)
@@ -46,9 +47,25 @@ export default function Home() {
     }
   };
 
+  const fetchComments = async () => {
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/comments`;
+      const response = await fetch(apiUrl, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Failed to fetch comments');
+      }
+      const data = await response.json();
+      setComments(data);
+      console.log('💬 Comments refreshed:', data.length, 'comments');
+    } catch (error) {
+      console.error('❌ Failed to refresh comments:', error);
+    }
+  };
+
   useEffect(() => {
     setIsClient(true);
     fetchMessages();
+    fetchComments();
     
     // Track tab visibility for smart polling
     const handleVisibilityChange = () => {
@@ -57,10 +74,11 @@ export default function Home() {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Set up auto-refresh every 3 seconds for new messages (only when tab is active)
+    // Set up auto-refresh every 3 seconds for new messages and comments (only when tab is active)
     const interval = setInterval(() => {
       if (isTabActive) {
         fetchMessages();
+        fetchComments();
       }
     }, 3000); // 3 seconds
     
@@ -73,12 +91,15 @@ export default function Home() {
 
   // Calculate unread counts for each platform
   const unreadCounts = useMemo(() => {
+    // Count unread comments (comments that haven't been replied to)
+    const unreadComments = comments.filter(c => !c.parentCommentId && !c.isReplied).length
+    
     return {
-      'instagram-comment': 0, // Placeholder
+      'instagram-comment': unreadComments,
       'instagram-dm': messages.filter(m => !m.isRead).length,
       'whatsapp': 0, // Placeholder
     }
-  }, [messages])
+  }, [messages, comments])
 
   // Handle platform change
   const handlePlatformChange = (platform: Platform | 'all') => {

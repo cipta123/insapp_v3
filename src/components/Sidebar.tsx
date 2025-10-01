@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { MessageCircle, Instagram, MessageSquare, BarChart3, Settings, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Platform } from '@/types'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 interface SidebarProps {
   selectedPlatform: Platform | 'all'
@@ -12,30 +14,36 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCounts }: SidebarProps) {
+  const pathname = usePathname()
+  
   const menuItems = [
     {
       id: 'all' as const,
       label: 'Semua Pesan',
       icon: MessageCircle,
-      count: Object.values(unreadCounts).reduce((a, b) => a + b, 0)
+      count: Object.values(unreadCounts).reduce((a, b) => a + b, 0),
+      href: '/'
     },
     {
       id: 'instagram-comment' as Platform,
       label: 'Instagram Comment',
       icon: Instagram,
-      count: unreadCounts['instagram-comment']
+      count: unreadCounts['instagram-comment'],
+      href: '/comments'
     },
     {
       id: 'instagram-dm' as Platform,
       label: 'Instagram DM',
       icon: MessageSquare,
-      count: unreadCounts['instagram-dm']
+      count: unreadCounts['instagram-dm'],
+      href: '/'
     },
     {
       id: 'whatsapp' as Platform,
       label: 'WhatsApp',
       icon: MessageCircle,
-      count: unreadCounts['whatsapp']
+      count: unreadCounts['whatsapp'],
+      href: '/'
     }
   ]
 
@@ -52,12 +60,19 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
         <div className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon
-            const isActive = selectedPlatform === item.id
+            const isActive = (item.href === '/' && pathname === '/') || 
+                           (item.href !== '/' && pathname === item.href) ||
+                           (pathname === '/' && selectedPlatform === item.id)
             
             return (
-              <button
+              <Link
                 key={item.id}
-                onClick={() => onPlatformChange(item.id)}
+                href={item.href}
+                onClick={() => {
+                  if (item.href === '/') {
+                    onPlatformChange(item.id)
+                  }
+                }}
                 className={cn(
                   "w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors",
                   isActive 
@@ -79,7 +94,7 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
                     {item.count}
                   </span>
                 )}
-              </button>
+              </Link>
             )
           })}
         </div>
