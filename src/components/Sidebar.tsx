@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageCircle, Instagram, MessageSquare, BarChart3, Settings, Bell } from 'lucide-react'
+import { MessageCircle, Instagram, MessageSquare, BarChart3, Settings, Bell, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Platform } from '@/types'
 import Link from 'next/link'
@@ -68,6 +68,8 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
               <Link
                 key={item.id}
                 href={item.href}
+                target={item.href === '/comments' ? '_blank' : '_self'}
+                rel={item.href === '/comments' ? 'noopener noreferrer' : undefined}
                 onClick={() => {
                   if (item.href === '/') {
                     onPlatformChange(item.id)
@@ -83,6 +85,9 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
                 <div className="flex items-center space-x-3">
                   <Icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
+                  {item.href === '/comments' && (
+                    <ExternalLink className="h-3 w-3 opacity-50" />
+                  )}
                 </div>
                 {item.count > 0 && (
                   <span className={cn(
