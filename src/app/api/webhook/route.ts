@@ -67,6 +67,80 @@ async function ensureUserInfo(userId: string) {
   }
 }
 
+// Function to handle comment events
+async function handleCommentEvent(commentData: any) {
+  try {
+    console.log('💬 COMMENT: Processing comment event...');
+    
+    // Extract comment information
+    const commentId = commentData.id;
+    const postId = commentData.media?.id || commentData.parent_id;
+    const userId = commentData.from?.id;
+    const username = commentData.from?.username;
+    const text = commentData.text;
+    // Use current time if created_time is not available
+    const timestamp = commentData.created_time 
+      ? new Date(commentData.created_time * 1000) 
+      : new Date();
+    const parentCommentId = commentData.parent_id !== postId ? commentData.parent_id : null;
+    
+    console.log('💬 COMMENT: Details:', {
+      commentId,
+      postId,
+      userId,
+      username,
+      text: text?.substring(0, 50) + '...',
+      isReply: !!parentCommentId
+    });
+    
+    // Check if comment already exists
+    const existingComment = await prisma.instagramComment.findUnique({
+      where: { commentId }
+    });
+    
+    if (existingComment) {
+      console.log('⚠️ COMMENT: Comment already exists, skipping:', commentId);
+      return;
+    }
+    
+    // Ensure post exists
+    if (postId) {
+      await prisma.instagramPost.upsert({
+        where: { postId },
+        update: {},
+        create: {
+          postId,
+          mediaType: commentData.media?.media_type || 'UNKNOWN',
+          permalink: commentData.media?.permalink
+        }
+      });
+    }
+    
+    // Save comment
+    await prisma.instagramComment.create({
+      data: {
+        commentId,
+        postId,
+        parentCommentId,
+        userId,
+        username,
+        text: text || '',
+        timestamp
+      }
+    });
+    
+    console.log('✅ COMMENT: Comment saved to database');
+    
+    // Auto-fetch user info if not exists
+    if (userId) {
+      await ensureUserInfo(userId);
+    }
+    
+  } catch (error) {
+    console.error('💥 COMMENT: Error processing comment:', error);
+  }
+}
+
 /**
  * Handles webhook verification for the Instagram Graph API.
  */
@@ -90,22 +164,32 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-hub-signature-256');
-  if (!signature) {
-    console.error('Missing x-hub-signature-256 header');
-    return new NextResponse('Forbidden', { status: 403 });
-  }
+  
+  // Skip signature validation in development for testing
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  let bodyText: string;
+  
+  if (!isDevelopment) {
+    if (!signature) {
+      console.error('Missing x-hub-signature-256 header');
+      return new NextResponse('Forbidden', { status: 403 });
+    }
 
-  if (!APP_SECRET) {
-    console.error('APP_SECRET is not set in environment variables');
-    return new NextResponse('Internal Server Error', { status: 500 });
-  }
+    if (!APP_SECRET) {
+      console.error('APP_SECRET is not set in environment variables');
+      return new NextResponse('Internal Server Error', { status: 500 });
+    }
 
-  const bodyText = await req.text();
-  const expectedSignature = 'sha256=' + crypto.createHmac('sha256', APP_SECRET).update(bodyText).digest('hex');
+    bodyText = await req.text();
+    const expectedSignature = 'sha256=' + crypto.createHmac('sha256', APP_SECRET).update(bodyText).digest('hex');
 
-  if (signature !== expectedSignature) {
-    console.error('Invalid signature');
-    return new NextResponse('Unauthorized', { status: 401 });
+    if (signature !== expectedSignature) {
+      console.error('Invalid signature');
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+  } else {
+    console.log('🧪 DEVELOPMENT: Skipping signature validation for testing');
+    bodyText = await req.text();
   }
 
   try {
@@ -114,7 +198,9 @@ export async function POST(req: NextRequest) {
 
     if (body.object === 'instagram') {
       for (const entry of body.entry) {
-        for (const event of entry.messaging) {
+        // Handle messaging events (DMs)
+        if (entry.messaging) {
+          for (const event of entry.messaging) {
           if (event.message) {
             // Standardize conversationId format: always put smaller ID first
             const ids = [event.sender.id, event.recipient.id].sort();
@@ -167,6 +253,17 @@ export async function POST(req: NextRequest) {
 
               // Auto-fetch user info if not exists
               await ensureUserInfo(event.sender.id);
+            }
+          }
+        }
+        }
+        
+        // Handle comments events
+        if (entry.changes) {
+          for (const change of entry.changes) {
+            if (change.field === 'comments') {
+              console.log('WEBHOOK: Received comment event:', JSON.stringify(change.value, null, 2));
+              await handleCommentEvent(change.value);
             }
           }
         }
