@@ -4,6 +4,9 @@ import axios from 'axios'
 
 const prisma = new PrismaClient()
 
+// Simple rate limiting to prevent double sends
+const recentRequests = new Map<string, number>()
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -17,6 +20,32 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Rate limiting: Check if same request was made recently (within 3 seconds)
+    const requestKey = `${conversationId}:${replyText}`
+    const now = Date.now()
+    const lastRequest = recentRequests.get(requestKey)
+    
+    if (lastRequest && (now - lastRequest) < 3000) {
+      console.log('⚠️ WATZAP_REPLY: Duplicate request detected, ignoring')
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Duplicate request ignored',
+        replyId: 'duplicate_' + now
+      })
+    }
+    
+    // Store this request
+    recentRequests.set(requestKey, now)
+    
+    // Clean up old requests (older than 10 seconds)
+    const keysToDelete: string[] = []
+    recentRequests.forEach((timestamp, key) => {
+      if (now - timestamp > 10000) {
+        keysToDelete.push(key)
+      }
+    })
+    keysToDelete.forEach(key => recentRequests.delete(key))
     
     // Send message via Watzap.id API
     console.log('📤 WATZAP_REPLY: Sending via Watzap.id API...')

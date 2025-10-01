@@ -32,6 +32,7 @@ export default function WhatsAppContent() {
   const [selectedContact, setSelectedContact] = useState<WhatsAppContact | null>(null)
   const [replyText, setReplyText] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
 
   const fetchMessages = async () => {
     try {
@@ -82,7 +83,14 @@ export default function WhatsAppContent() {
   }, [])
 
   const handleSendReply = async () => {
-    if (!selectedContact || !replyText.trim()) return
+    if (!selectedContact || !replyText.trim() || sending) return
+
+    setSending(true)
+    console.log('🚀 WHATSAPP_UI: Sending reply...', { 
+      contact: selectedContact.id, 
+      text: replyText.trim(),
+      sending 
+    })
 
     try {
       const response = await fetch('/api/whatsapp/reply', {
@@ -99,13 +107,18 @@ export default function WhatsAppContent() {
       if (response.ok) {
         console.log('✅ WhatsApp reply sent successfully')
         setReplyText('')
-        // Refresh messages to show new reply
-        fetchMessages()
+        
+        // Wait a bit before refreshing to avoid race condition
+        setTimeout(() => {
+          fetchMessages()
+        }, 500)
       } else {
         console.error('Failed to send WhatsApp reply')
       }
     } catch (error) {
       console.error('Error sending WhatsApp reply:', error)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -329,10 +342,14 @@ export default function WhatsAppContent() {
                 </div>
                 <button
                   onClick={handleSendReply}
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || sending}
                   className="bg-green-500 text-white p-3 rounded-full hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <Send className="h-5 w-5" />
+                  {sending ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
