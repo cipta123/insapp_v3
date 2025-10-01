@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Send, Smile, Paperclip, MoreVertical, Clock, CheckCircle } from 'lucide-react'
 import { QuickReply } from '@/types'
+import ReplyForm from './ReplyForm'
 
 // This should match the type in page.tsx
 interface InstagramMessage {
@@ -146,48 +147,15 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
         </div>
       )}
 
-      {/* Reply Input */}
-      <div className="border-t border-gray-200 p-6">
-        <div className="flex items-end space-x-3">
-          <div className="flex-1">
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="Tulis balasan..."
-              rows={3}
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex flex-col space-y-2">
-            <button
-              onClick={() => setShowQuickReplies(!showQuickReplies)}
-              className={cn(
-                "p-3 rounded-lg transition-colors",
-                showQuickReplies 
-                  ? "bg-blue-100 text-blue-600" 
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              )}
-            >
-              <Smile className="h-5 w-5" />
-            </button>
-            <button className="p-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">
-              <Paperclip className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleSendReply}
-              disabled={!replyText.trim()}
-              className={cn(
-                "p-3 rounded-lg transition-colors",
-                replyText.trim()
-                  ? "bg-blue-500 text-white hover:bg-blue-600"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
-              )}
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Reply Form */}
+      <ReplyForm 
+        recipientId={messages[0]?.senderId || ''}
+        conversationId={conversationId}
+        onReplySuccess={() => {
+          // Refresh messages or show success notification
+          console.log('Reply sent successfully!');
+        }}
+      />
     </div>
   )
 }
