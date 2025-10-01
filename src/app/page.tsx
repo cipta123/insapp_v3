@@ -7,6 +7,7 @@ import MessageList from '@/components/MessageList'
 import MessageDetail from '@/components/MessageDetail'
 import { quickReplies, stats } from '@/data/mockData'
 import { Platform, Reply } from '@/types'
+import CommentsContent from '@/components/CommentsContent'
 
 // Define a type that matches our Prisma model
 interface InstagramMessage {
@@ -170,25 +171,35 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Messages Area */}
+        {/* Content Area */}
         <div className="flex-1 flex">
-          {/* Message List */}
-          <MessageList
-            messages={sortedMessages}
-            selectedConversationId={selectedConversationId}
-            onMessageSelect={handleMessageSelect}
-            selectedPlatform={selectedPlatform}
-            onRefreshMessages={fetchMessages}
-          />
+          {selectedPlatform === 'instagram-comment' ? (
+            /* Instagram Comments Interface */
+            <div className="flex-1">
+              <CommentsContent />
+            </div>
+          ) : (
+            /* Instagram DM Interface */
+            <>
+              {/* Message List */}
+              <MessageList
+                messages={sortedMessages}
+                selectedConversationId={selectedConversationId}
+                onMessageSelect={handleMessageSelect}
+                selectedPlatform={selectedPlatform}
+                onRefreshMessages={fetchMessages}
+              />
 
-          {/* Message Detail */}
-          <MessageDetail
-            conversationId={selectedConversationId}
-            messages={messages.filter(m => m.conversationId === selectedConversationId)}
-            quickReplies={quickReplies}
-            onSendReply={handleSendReply}
-            onRefreshMessages={fetchMessages}
-          />
+              {/* Message Detail */}
+              <MessageDetail
+                conversationId={selectedConversationId}
+                messages={messages.filter(m => m.conversationId === selectedConversationId)}
+                quickReplies={quickReplies}
+                onSendReply={handleSendReply}
+                onRefreshMessages={fetchMessages}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

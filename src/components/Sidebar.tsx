@@ -21,29 +21,25 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
       id: 'all' as const,
       label: 'Semua Pesan',
       icon: MessageCircle,
-      count: Object.values(unreadCounts).reduce((a, b) => a + b, 0),
-      href: '/'
+      count: Object.values(unreadCounts).reduce((a, b) => a + b, 0)
     },
     {
       id: 'instagram-comment' as Platform,
       label: 'Instagram Comment',
       icon: Instagram,
-      count: unreadCounts['instagram-comment'],
-      href: '/comments'
+      count: unreadCounts['instagram-comment']
     },
     {
       id: 'instagram-dm' as Platform,
       label: 'Instagram DM',
       icon: MessageSquare,
-      count: unreadCounts['instagram-dm'],
-      href: '/'
+      count: unreadCounts['instagram-dm']
     },
     {
       id: 'whatsapp' as Platform,
       label: 'WhatsApp',
       icon: MessageCircle,
-      count: unreadCounts['whatsapp'],
-      href: '/'
+      count: unreadCounts['whatsapp']
     }
   ]
 
@@ -60,21 +56,12 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
         <div className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon
-            const isActive = (item.href === '/' && pathname === '/') || 
-                           (item.href !== '/' && pathname === item.href) ||
-                           (pathname === '/' && selectedPlatform === item.id)
+            const isActive = selectedPlatform === item.id
             
             return (
-              <Link
+              <button
                 key={item.id}
-                href={item.href}
-                target={item.href === '/comments' ? '_blank' : '_self'}
-                rel={item.href === '/comments' ? 'noopener noreferrer' : undefined}
-                onClick={() => {
-                  if (item.href === '/') {
-                    onPlatformChange(item.id)
-                  }
-                }}
+                onClick={() => onPlatformChange(item.id)}
                 className={cn(
                   "w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors",
                   isActive 
@@ -85,9 +72,6 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
                 <div className="flex items-center space-x-3">
                   <Icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
-                  {item.href === '/comments' && (
-                    <ExternalLink className="h-3 w-3 opacity-50" />
-                  )}
                 </div>
                 {item.count > 0 && (
                   <span className={cn(
@@ -99,7 +83,7 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
                     {item.count}
                   </span>
                 )}
-              </Link>
+              </button>
             )
           })}
         </div>
