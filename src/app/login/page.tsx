@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, User, Shield, Crown, Star, Briefcase, ChevronDown } from 'lucide-react'
+import { useAuth } from '@/components/AuthProvider'
 
 interface UserRole {
   id: string
@@ -49,6 +50,7 @@ const userRoles: UserRole[] = [
 ]
 
 export default function LoginPage() {
+  const { login } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [selectedRole, setSelectedRole] = useState<UserRole>(userRoles[0])
@@ -82,12 +84,8 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Store user data and token
-        localStorage.setItem('user', JSON.stringify(data.user))
-        localStorage.setItem('token', data.token)
-        
-        // Redirect to dashboard
-        router.push('/')
+        // Use AuthProvider's login method instead of manual localStorage
+        login(data.user, data.token)
       } else {
         alert(data.error || 'Login failed')
       }
@@ -124,8 +122,8 @@ export default function LoginPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mb-4 shadow-lg">
               <Star className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
-            <p className="text-gray-600">Sign in to your customer service dashboard</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">InsApp</h1>
+            <p className="text-gray-600">UT Serang Integrated Social Media dashboard</p>
           </div>
 
           {/* Login Form */}
