@@ -60,7 +60,10 @@ export default function WhatsAppContent() {
         
         // Auto-select first contact if none selected
         if (!selectedContact && contactsList.length > 0) {
-          setSelectedContact(contactsList[0])
+          const firstContact = contactsList[0]
+          setSelectedContact(firstContact)
+          // Mark messages as read for auto-selected contact
+          markContactMessagesAsRead(firstContact.id)
         }
         
         setLoading(false)
@@ -81,6 +84,40 @@ export default function WhatsAppContent() {
 
     return () => clearInterval(interval)
   }, [])
+
+  const markContactMessagesAsRead = async (contactId: string) => {
+    try {
+      console.log('📖 WHATSAPP_UI: Marking messages as read for contact:', contactId)
+      
+      const response = await fetch('/api/whatsapp/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId: contactId
+        })
+      })
+
+      if (response.ok) {
+        console.log('✅ WHATSAPP_UI: Messages marked as read')
+        // Refresh messages to update UI
+        setTimeout(() => {
+          fetchMessages()
+        }, 500)
+      } else {
+        console.error('Failed to mark WhatsApp messages as read')
+      }
+    } catch (error) {
+      console.error('Error marking WhatsApp messages as read:', error)
+    }
+  }
+
+  const handleContactSelect = (contact: WhatsAppContact) => {
+    setSelectedContact(contact)
+    // Mark all messages from this contact as read
+    markContactMessagesAsRead(contact.id)
+  }
 
   const handleSendReply = async () => {
     if (!selectedContact || !replyText.trim() || sending) return
@@ -191,7 +228,7 @@ export default function WhatsAppContent() {
                 return (
                   <div
                     key={contact.id}
-                    onClick={() => setSelectedContact(contact)}
+                    onClick={() => handleContactSelect(contact)}
                     className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
                       selectedContact?.id === contact.id
                         ? 'bg-green-50 border border-green-200'
