@@ -1,0 +1,301 @@
+Check API Status
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "XXXXXXXXXXX"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/checking_key',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+
+Example Response
+json
+{
+  "data": {
+    "id": "XXXXXXXX",
+    "name": "WatZap.id",
+    "email": "yourmail@mail.com",
+    "expires_on": "27 April 2022 (41 days remaining)",
+    "plan": "WatZap Premium",
+    "total_legacy_licenses": "AMOUNT OF LEGACY NUMBER AVAILABLE",
+    "licenses_key": [
+      {
+        "id": "YOUR-NUMBERID",
+        "key": "YOUR-KEY",
+        "plan": "WatZap Premium",
+        "active_from": "2021-05-04 00:00:00",
+        "active_until": "2022-04-27 00:00:00",
+        "limit_message_per_day": 0,
+        "expires_on": "27 April 2022 (41 days remaining)",
+        "limit_domain": "Unlimited",
+        "wa_number": "628XXXXXXXX",
+        "is_connected": true
+      }
+    ]
+  },
+  "status": true,
+  "message": "Successfully"
+}
+
+
+Validate WhatsApp Number
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "YOUR-API-KEY",
+  "number_key": "YOUR-NUMBER-KEY",
+  "phone_no": "628xxxx"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/validate_number',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+Example Response
+Body
+Headers (3)
+json
+{
+  "status": "200",
+  "message": "Valid WhatsApp Number",
+  "ack": "successfully"
+}
+
+Send Text Message
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "YOUR-API-KEY",
+  "number_key": "YOUR-NUMBER-KEY",
+  "phone_no": "628xxxx",
+  "message": "YOUR-MESSAGE"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/send_message',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+Send Image (Caption)
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "YOUR-API-KEY",
+  "number_key": "YOUR-NUMBER-KEY",
+  "phone_no": "628xxxx",
+  "url": "YOUR-PUBLIC-IMAGE-URL",
+  "message": "YOUR-MESSAGE",
+  "separate_caption": "(0 for No, 1 for Yes)"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/send_image_url',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+Send File
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "YOUR-API-KEY",
+  "number_key": "YOUR-NUMBER-KEY",
+  "phone_no": "628xxxx",
+  "url": "YOUR-PUBLIC-FILE-URL"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/send_file_url',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+Set Web Hook
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "YOUR-API-KEY",
+  "number_key": "YOUR-NUMBER-KEY",
+  "endpoint_url": "YOUR-ENDPOINT-URL"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/set_webhook',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+Get Web Hook
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "YOUR-API-KEY",
+  "number_key": "YOUR-NUMBER-KEY"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/get_webhook',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+Unset Web Hook
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "api_key": "YOUR-API-KEY",
+  "number_key": "YOUR-NUMBER-KEY"
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://api.watzap.id/v1/unset_webhook',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+
+Example Web Hook Request
+nodejs
+var axios = require('axios');
+var data = JSON.stringify({
+  "type": "incoming_chat",
+  "data": {
+    "chat_id": "XXXXXXXXX",
+    "message_id": "XXXXXXXXX",
+    "name": "Nitami",
+    "profile_picture": "https://example.com",
+    "timestamp": 9283828329,
+    "message_body": "Hi There",
+    "message_ack": "PENDING",
+    "has_media": false,
+    "media_mime": "",
+    "media_name": "",
+    "location_attached": {
+      "lat": null,
+      "lng": null
+    },
+    "is_forwading": false,
+    "is_from_me": false
+  }
+});
+
+var config = {
+  method: 'post',
+maxBodyLength: Infinity,
+  url: 'https://yoursite.com/webhook_receiver.php',
+  headers: { 
+    'Content-Type': 'application/json'
+  },
+  data : data
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+})
+.catch(function (error) {
+  console.log(error);
+});

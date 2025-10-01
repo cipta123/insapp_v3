@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import axios from 'axios'
 
 const prisma = new PrismaClient()
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('💬 WHATSAPP_REPLY: Starting reply process...', body)
+    console.log('💬 WATZAP_REPLY: Starting reply process...', body)
     
     const { conversationId, replyText, replyToId } = body
     
@@ -17,21 +18,41 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // For now, we'll simulate sending via WhatsApp Business API
-    // In production, you would integrate with WhatsApp Business API here
-    console.log('📤 WHATSAPP_REPLY: Simulating WhatsApp Business API call...')
-    console.log('📤 WHATSAPP_REPLY: To:', conversationId)
-    console.log('📤 WHATSAPP_REPLY: Message:', replyText)
+    // Send message via Watzap.id API
+    console.log('📤 WATZAP_REPLY: Sending via Watzap.id API...')
+    console.log('📤 WATZAP_REPLY: To:', conversationId)
+    console.log('📤 WATZAP_REPLY: Message:', replyText)
+    
+    const watzapData = {
+      api_key: process.env.WATZAP_API_KEY,
+      number_key: process.env.WATZAP_NUMBER_KEY,
+      phone_no: conversationId,
+      message: replyText
+    }
+    
+    console.log('🔑 WATZAP_REPLY: Using API Key:', process.env.WATZAP_API_KEY)
+    console.log('🔑 WATZAP_REPLY: Using Number Key:', process.env.WATZAP_NUMBER_KEY)
+    
+    const watzapResponse = await axios({
+      method: 'post',
+      url: 'https://api.watzap.id/v1/send_message',
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      data: watzapData
+    })
+    
+    console.log('✅ WATZAP_REPLY: Watzap.id API response:', watzapResponse.data)
     
     // Create a unique message ID for our reply
-    const replyMessageId = `wa_reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const replyMessageId = `watzap_reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     // Save the reply to our database
     const replyMessage = await prisma.whatsAppMessage.create({
       data: {
         messageId: replyMessageId,
         conversationId: conversationId,
-        senderId: process.env.WHATSAPP_BUSINESS_NUMBER || 'business',
+        senderId: 'business',
         recipientId: conversationId,
         text: replyText,
         messageType: 'text',
@@ -41,7 +62,7 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    console.log('✅ WHATSAPP_REPLY: Reply saved to database:', replyMessage.id)
+    console.log('✅ WATZAP_REPLY: Reply saved to database:', replyMessage.id)
     
     // Mark original message as read if replying to specific message
     if (replyToId) {
@@ -49,24 +70,30 @@ export async function POST(request: NextRequest) {
         where: { id: replyToId },
         data: { isRead: true }
       })
-      console.log('📝 WHATSAPP_REPLY: Original message marked as read')
+      console.log('📝 WATZAP_REPLY: Original message marked as read')
     }
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Reply sent successfully',
+      message: 'Reply sent successfully via Watzap.id',
       replyId: replyMessage.id,
-      // In production, you would return the actual WhatsApp API response
-      whatsappResponse: {
-        status: 'sent',
-        messageId: replyMessageId
-      }
+      watzapResponse: watzapResponse.data
     })
     
   } catch (error) {
-    console.error('❌ WHATSAPP_REPLY: Error sending reply:', error)
+    console.error('❌ WATZAP_REPLY: Error sending reply:', error)
+    
+    // Log more details about the error
+    if (error.response) {
+      console.error('❌ WATZAP_REPLY: API Error Response:', error.response.data)
+      console.error('❌ WATZAP_REPLY: API Error Status:', error.response.status)
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to send WhatsApp reply' },
+      { 
+        error: 'Failed to send WhatsApp reply via Watzap.id',
+        details: error.response?.data || error.message
+      },
       { status: 500 }
     )
   }

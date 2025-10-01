@@ -142,99 +142,113 @@ async function handleCommentEvent(commentData: any) {
 }
 
 /**
- * Handles WhatsApp message events from webhook
+ * Handles Watzap.id webhook message events
  */
-async function handleWhatsAppMessage(messageData: any) {
+async function handleWatzapMessage(webhookData: any) {
   try {
-    console.log('📱 WHATSAPP: Processing message data:', messageData);
+    console.log('📱 WATZAP: Processing webhook data:', webhookData);
     
-    if (!messageData.messages || messageData.messages.length === 0) {
-      console.log('📱 WHATSAPP: No messages in webhook data');
+    // Watzap.id webhook format: { type: "incoming_chat", data: {...} }
+    if (webhookData.type !== 'incoming_chat') {
+      console.log('📱 WATZAP: Not an incoming chat, skipping');
       return;
     }
     
-    for (const message of messageData.messages) {
-      const messageId = message.id;
-      const senderId = message.from; // Phone number
-      const timestamp = new Date(parseInt(message.timestamp) * 1000);
-      
-      // Extract message content based on type
-      let text = null;
-      let messageType = 'text';
-      let mediaUrl = null;
-      
-      if (message.text) {
-        text = message.text.body;
-        messageType = 'text';
-      } else if (message.image) {
-        messageType = 'image';
-        mediaUrl = message.image.id; // WhatsApp media ID
-        text = message.image.caption || null;
-      } else if (message.audio) {
-        messageType = 'audio';
-        mediaUrl = message.audio.id;
-      } else if (message.video) {
-        messageType = 'video';
-        mediaUrl = message.video.id;
-        text = message.video.caption || null;
-      } else if (message.document) {
-        messageType = 'document';
-        mediaUrl = message.document.id;
-        text = message.document.filename || null;
-      }
-      
-      console.log('📱 WHATSAPP: Message details:', {
-        messageId,
-        senderId,
-        text,
-        messageType,
-        timestamp
-      });
-      
-      // Check if message already exists
-      const existingMessage = await prisma.whatsAppMessage.findUnique({
-        where: { messageId }
-      });
-      
-      if (existingMessage) {
-        console.log('⚠️ WHATSAPP: Message already exists, skipping:', messageId);
-        continue;
-      }
-      
-      // Save message to database
-      await prisma.whatsAppMessage.create({
-        data: {
-          messageId,
-          conversationId: senderId, // Use phone number as conversation ID
-          senderId,
-          recipientId: messageData.metadata?.phone_number_id || 'business',
-          text,
-          messageType,
-          mediaUrl,
-          timestamp,
-          isFromBusiness: false // Incoming messages are from customers
-        }
-      });
-      
-      console.log('✅ WHATSAPP: Message saved to database');
-      
-      // Auto-save contact info if not exists
-      await prisma.whatsAppContact.upsert({
-        where: { id: senderId },
-        update: { lastSeen: new Date() },
-        create: {
-          id: senderId,
-          name: messageData.contacts?.[0]?.profile?.name || null,
-          profileName: messageData.contacts?.[0]?.profile?.name || null,
-          lastSeen: new Date()
-        }
-      });
-      
-      console.log('✅ WHATSAPP: Contact info updated');
+    const messageData = webhookData.data;
+    if (!messageData) {
+      console.log('📱 WATZAP: No message data in webhook');
+      return;
     }
     
+    const messageId = messageData.message_id;
+    const chatId = messageData.chat_id; // Phone number
+    const senderName = messageData.name;
+    const messageBody = messageData.message_body;
+    const timestamp = new Date(messageData.timestamp * 1000);
+    const hasMedia = messageData.has_media;
+    const mediaMime = messageData.media_mime;
+    const mediaName = messageData.media_name;
+    const isFromMe = messageData.is_from_me;
+    
+    console.log('📱 WATZAP: Message details:', {
+      messageId,
+      chatId,
+      senderName,
+      messageBody,
+      hasMedia,
+      isFromMe,
+      timestamp
+    });
+    
+    // Skip messages from business (sent by us)
+    if (isFromMe) {
+      console.log('📱 WATZAP: Message is from business, skipping');
+      return;
+    }
+    
+    // Check if message already exists
+    const existingMessage = await prisma.whatsAppMessage.findUnique({
+      where: { messageId }
+    });
+    
+    if (existingMessage) {
+      console.log('⚠️ WATZAP: Message already exists, skipping:', messageId);
+      return;
+    }
+    
+    // Determine message type based on media
+    let messageType = 'text';
+    let mediaUrl = null;
+    
+    if (hasMedia) {
+      if (mediaMime?.startsWith('image/')) {
+        messageType = 'image';
+      } else if (mediaMime?.startsWith('audio/')) {
+        messageType = 'audio';
+      } else if (mediaMime?.startsWith('video/')) {
+        messageType = 'video';
+      } else {
+        messageType = 'document';
+      }
+      mediaUrl = mediaName; // Store media name/reference
+    }
+    
+    // Save message to database
+    await prisma.whatsAppMessage.create({
+      data: {
+        messageId,
+        conversationId: chatId, // Use chat_id as conversation ID
+        senderId: chatId,
+        recipientId: 'business',
+        text: messageBody || null,
+        messageType,
+        mediaUrl,
+        timestamp,
+        isFromBusiness: false // Incoming messages are from customers
+      }
+    });
+    
+    console.log('✅ WATZAP: Message saved to database');
+    
+    // Auto-save contact info if not exists
+    await prisma.whatsAppContact.upsert({
+      where: { id: chatId },
+      update: { 
+        lastSeen: new Date(),
+        name: senderName || null
+      },
+      create: {
+        id: chatId,
+        name: senderName || null,
+        profileName: senderName || null,
+        lastSeen: new Date()
+      }
+    });
+    
+    console.log('✅ WATZAP: Contact info updated');
+    
   } catch (error) {
-    console.error('💥 WHATSAPP: Error processing message:', error);
+    console.error('💥 WATZAP: Error processing message:', error);
   }
 }
 
@@ -367,20 +381,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Handle WhatsApp webhook events
-    if (body.object === 'whatsapp_business_account') {
-      console.log('📱 WHATSAPP_WEBHOOK: Processing WhatsApp event...');
-      
-      for (const entry of body.entry) {
-        if (entry.changes) {
-          for (const change of entry.changes) {
-            if (change.field === 'messages') {
-              console.log('📱 WHATSAPP_WEBHOOK: Received message event:', JSON.stringify(change.value, null, 2));
-              await handleWhatsAppMessage(change.value);
-            }
-          }
-        }
-      }
+    // Handle Watzap.id webhook events
+    if (body.type === 'incoming_chat') {
+      console.log('📱 WATZAP_WEBHOOK: Processing Watzap.id event...');
+      console.log('📱 WATZAP_WEBHOOK: Received message event:', JSON.stringify(body, null, 2));
+      await handleWatzapMessage(body);
     }
 
     return new NextResponse('Event received', { status: 200 });
