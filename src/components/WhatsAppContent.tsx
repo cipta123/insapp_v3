@@ -33,12 +33,14 @@ export default function WhatsAppContent() {
   const [replyText, setReplyText] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [userInteracting, setUserInteracting] = useState(false)
 
   const fetchMessages = async () => {
     try {
       const response = await fetch('/api/whatsapp/messages')
       if (response.ok) {
         const data = await response.json()
+        console.log('📱 WHATSAPP_FETCH: Raw messages data:', data)
         setMessages(data)
         
         // Extract unique contacts from messages
@@ -58,12 +60,13 @@ export default function WhatsAppContent() {
         const contactsList = Array.from(contactMap.values())
         setContacts(contactsList)
         
-        // Auto-select first contact if none selected
-        if (!selectedContact && contactsList.length > 0) {
+        // Auto-select first contact if none selected (only if not user interacting)
+        if (!selectedContact && contactsList.length > 0 && !userInteracting) {
           const firstContact = contactsList[0]
           setSelectedContact(firstContact)
           // Mark messages as read for auto-selected contact
           markContactMessagesAsRead(firstContact.id)
+          console.log('🎯 AUTO_SELECT: Selected first contact and marking messages as read:', firstContact.id)
         }
         
         setLoading(false)
@@ -77,13 +80,17 @@ export default function WhatsAppContent() {
   useEffect(() => {
     fetchMessages()
     
-    // Auto-refresh every 3 seconds
+    // Auto-refresh every 3 seconds (but pause during user interaction)
     const interval = setInterval(() => {
-      fetchMessages()
+      if (!userInteracting) {
+        fetchMessages()
+      } else {
+        console.log('⏸️ WHATSAPP: Skipping auto-refresh during user interaction')
+      }
     }, 3000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [userInteracting])
 
   const markContactMessagesAsRead = async (contactId: string) => {
     try {
@@ -114,9 +121,22 @@ export default function WhatsAppContent() {
   }
 
   const handleContactSelect = (contact: WhatsAppContact) => {
+    console.log('🎯 CONTACT_SELECT: Selecting contact:', contact.id)
+    
+    // Prevent auto-refresh during user interaction
+    setUserInteracting(true)
+    
     setSelectedContact(contact)
+    
     // Mark all messages from this contact as read
     markContactMessagesAsRead(contact.id)
+    
+    // Re-enable auto-refresh after a delay
+    setTimeout(() => {
+      setUserInteracting(false)
+    }, 2000) // 2 seconds pause
+    
+    console.log('🎯 CONTACT_SELECT: Selected contact and marking messages as read:', contact.id)
   }
 
   const handleSendReply = async () => {
@@ -208,10 +228,33 @@ export default function WhatsAppContent() {
       {/* Contacts List - WhatsApp Style */}
       <div className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto">
         <div className="p-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Phone className="h-5 w-5 mr-2 text-green-600" />
-            WhatsApp Chats
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Phone className="h-5 w-5 mr-2 text-green-600" />
+              WhatsApp Chats
+            </h2>
+            {/* Debug: Mark all as read button */}
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/mark-all-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ platform: 'whatsapp' })
+                  })
+                  if (response.ok) {
+                    console.log('✅ All WhatsApp messages marked as read')
+                    setTimeout(() => fetchMessages(), 500)
+                  }
+                } catch (error) {
+                  console.error('❌ Error marking all as read:', error)
+                }
+              }}
+              className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+            >
+              Mark All Read
+            </button>
+          </div>
           
           {contacts.length === 0 ? (
             <div className="text-center py-8">
@@ -224,6 +267,21 @@ export default function WhatsAppContent() {
                 const contactMessages = getContactMessages(contact.id)
                 const lastMessage = contactMessages[contactMessages.length - 1]
                 const unreadCount = contactMessages.filter(msg => !msg.isRead && !msg.isFromBusiness).length
+                
+                // Debug logging
+                console.log('🔍 WHATSAPP_DEBUG:', {
+                  contactId: contact.id,
+                  totalMessages: contactMessages.length,
+                  unreadCount,
+                  unreadMessages: contactMessages.filter(msg => !msg.isRead && !msg.isFromBusiness),
+                  allMessages: contactMessages.map(m => ({
+                    id: m.id,
+                    text: m.text?.substring(0, 30),
+                    isRead: m.isRead,
+                    isFromBusiness: m.isFromBusiness,
+                    shouldCount: !m.isRead && !m.isFromBusiness
+                  }))
+                })
                 
                 return (
                   <div
@@ -269,6 +327,8 @@ export default function WhatsAppContent() {
                           <span className="text-xs font-bold text-white">{unreadCount > 99 ? '99+' : unreadCount}</span>
                         </div>
                       )}
+                      {/* Debug badge - always show unread count for testing */}
+                      <div className="text-xs text-gray-400 ml-1">({unreadCount})</div>
                     </div>
 
                     {/* Last Message Preview */}

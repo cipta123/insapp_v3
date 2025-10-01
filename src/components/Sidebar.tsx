@@ -91,17 +91,37 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
         {/* Secondary Navigation */}
         <div className="mt-8 pt-8 border-t border-gray-200">
           <div className="space-y-2">
-            <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
+            <Link 
+              href="/analytics"
+              className={cn(
+                "w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors",
+                pathname === '/analytics'
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-700 hover:bg-gray-50"
+              )}
+            >
               <BarChart3 className="h-5 w-5" />
-              <span className="font-medium">Analytics</span>
-            </button>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
+              <span>Analytics</span>
+              {pathname === '/analytics' && <ExternalLink className="h-4 w-4 ml-auto" />}
+            </Link>
+            
+            <Link 
+              href="/debug-unread"
+              className={cn(
+                "w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors",
+                pathname === '/debug-unread'
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-700 hover:bg-gray-50"
+              )}
+            >
               <Bell className="h-5 w-5" />
-              <span className="font-medium">Notifications</span>
-            </button>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
+              <span>Debug Unread</span>
+              {pathname === '/debug-unread' && <ExternalLink className="h-4 w-4 ml-auto" />}
+            </Link>
+            
+            <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium">
               <Settings className="h-5 w-5" />
-              <span className="font-medium">Settings</span>
+              <span>Settings</span>
             </button>
           </div>
         </div>
