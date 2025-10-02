@@ -36,3 +36,11 @@ yarn-error.log*
 next-env.d.ts
 
 /generated/prisma
+
+# Maintenance and backup files
+backups/
+health-report-*.json
+emergency-fix-report-*.json
+maintenance-test-report-*.json
+*.backup
+*.restore

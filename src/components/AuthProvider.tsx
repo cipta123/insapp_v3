@@ -29,26 +29,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check if user is logged in
     console.log('🔍 AuthProvider: Checking localStorage...')
-    const userData = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
     
-    console.log('🔍 AuthProvider: userData exists:', !!userData)
-    console.log('🔍 AuthProvider: token exists:', !!token)
-
-    if (userData && token) {
+    // Add a small delay to ensure localStorage is ready
+    const checkAuth = () => {
       try {
-        const parsedUser = JSON.parse(userData)
-        console.log('✅ AuthProvider: Setting user:', parsedUser.name, `(${parsedUser.role})`)
-        setUser(parsedUser)
+        const userData = localStorage.getItem('user')
+        const token = localStorage.getItem('token')
+        
+        console.log('🔍 AuthProvider: userData exists:', !!userData)
+        console.log('🔍 AuthProvider: token exists:', !!token)
+
+        if (userData && token) {
+          try {
+            const parsedUser = JSON.parse(userData)
+            console.log('✅ AuthProvider: Setting user:', parsedUser.name, `(${parsedUser.role})`)
+            setUser(parsedUser)
+          } catch (error) {
+            console.error('❌ AuthProvider: Error parsing user data:', error)
+            localStorage.removeItem('user')
+            localStorage.removeItem('token')
+          }
+        } else {
+          console.log('🔍 AuthProvider: No user data found in localStorage')
+        }
+
+        setIsLoading(false)
+        console.log('🔍 AuthProvider: Initial check complete, isLoading set to false')
       } catch (error) {
-        console.error('❌ AuthProvider: Error parsing user data:', error)
-        localStorage.removeItem('user')
-        localStorage.removeItem('token')
+        console.error('❌ AuthProvider: localStorage access error:', error)
+        setIsLoading(false)
       }
     }
 
-    setIsLoading(false)
-    console.log('🔍 AuthProvider: Initial check complete, isLoading set to false')
+    // Small delay to ensure DOM is ready
+    setTimeout(checkAuth, 100)
   }, [])
 
   useEffect(() => {
@@ -67,11 +81,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (userData: User, token: string) => {
     console.log('🔐 AuthProvider: Login called with user:', userData.name, `(${userData.role})`)
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
-    localStorage.setItem('token', token)
-    console.log('🔐 AuthProvider: User state and localStorage updated, redirecting to dashboard')
-    router.push('/')
+    
+    try {
+      // Update state first
+      setUser(userData)
+      
+      // Then update localStorage
+      localStorage.setItem('user', JSON.stringify(userData))
+      localStorage.setItem('token', token)
+      
+      console.log('🔐 AuthProvider: User state and localStorage updated')
+      
+      // Small delay before redirect to ensure state is updated
+      setTimeout(() => {
+        console.log('🔐 AuthProvider: Redirecting to dashboard')
+        router.push('/')
+      }, 100)
+      
+    } catch (error) {
+      console.error('❌ AuthProvider: Login error:', error)
+    }
   }
 
   const logout = () => {

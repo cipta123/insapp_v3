@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageCircle, Instagram, MessageSquare, BarChart3, Settings, Bell, ExternalLink } from 'lucide-react'
+import { MessageCircle, Instagram, MessageSquare, BarChart3, Settings, Bell, ExternalLink, ChevronDown, ChevronRight, Users, Cog } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Platform } from '@/types'
 import Link from 'next/link'
@@ -15,6 +15,9 @@ interface SidebarProps {
 
 export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCounts }: SidebarProps) {
   const pathname = usePathname()
+  const [isSettingsOpen, setIsSettingsOpen] = useState(
+    pathname.startsWith('/user-setup') || pathname.startsWith('/config')
+  )
   
   const menuItems = [
     {
@@ -119,10 +122,61 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
               {pathname === '/debug-unread' && <ExternalLink className="h-4 w-4 ml-auto" />}
             </Link>
             
-            <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium">
-              <Settings className="h-5 w-5" />
-              <span>Settings</span>
-            </button>
+            {/* Settings Dropdown */}
+            <div className="space-y-1">
+              <button 
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={cn(
+                  "w-full flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-colors",
+                  isSettingsOpen || pathname.startsWith('/user-setup') || pathname.startsWith('/config')
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                <div className="flex items-center space-x-3">
+                  <Settings className="h-5 w-5" />
+                  <span>Settings</span>
+                </div>
+                {isSettingsOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              
+              {/* Settings Submenu */}
+              {isSettingsOpen && (
+                <div className="ml-4 space-y-1">
+                  <Link 
+                    href="/user-setup"
+                    className={cn(
+                      "w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                      pathname === '/user-setup'
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>User Setup</span>
+                    {pathname === '/user-setup' && <ExternalLink className="h-3 w-3 ml-auto" />}
+                  </Link>
+                  
+                  <Link 
+                    href="/config"
+                    className={cn(
+                      "w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                      pathname === '/config'
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    <Cog className="h-4 w-4" />
+                    <span>System Config</span>
+                    {pathname === '/config' && <ExternalLink className="h-3 w-3 ml-auto" />}
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </nav>

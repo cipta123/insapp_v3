@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .nav-test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        a { display: inline-block; padding: 10px 15px; margin: 5px; background: #007bff; color: white; text-decoration: none; border-radius: 3px; }
+        a:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🧭 Navigation Test</h1>
+    
+    <div class="nav-test info">
+        <h3>Quick Navigation Links</h3>
+        <p>Test semua halaman yang sudah dibuat:</p>
+        
+        <a href="http://localhost:3000/" target="_blank">🏠 Dashboard</a>
+        <a href="http://localhost:3000/login" target="_blank">🔐 Login Page</a>
+        <a href="http://localhost:3000/user-setup" target="_blank">👥 User Setup</a>
+        <a href="http://localhost:3000/config" target="_blank">⚙️ System Config</a>
+        <a href="http://localhost:3000/analytics" target="_blank">📊 Analytics</a>
+        <a href="http://localhost:3000/test-auth" target="_blank">🧪 Auth Test</a>
+        <a href="http://localhost:3000/test-flow" target="_blank">🔄 Flow Test</a>
+    </div>
+
+    <div class="nav-test">
+        <h3>Settings Menu Test</h3>
+        <p>Untuk test Settings dropdown:</p>
+        <ol>
+            <li>Login sebagai admin/manager/direktur</li>
+            <li>Lihat sidebar kiri</li>
+            <li>Klik menu "Settings" (harus ada dropdown arrow)</li>
+            <li>Submenu harus muncul dengan:</li>
+            <ul>
+                <li>👥 User Setup</li>
+                <li>⚙️ System Config</li>
+            </ul>
+        </ol>
+    </div>
+
+    <div class="nav-test success">
+        <h3>✅ Expected Behavior</h3>
+        <ul>
+            <li><strong>Settings Menu:</strong> Klik untuk expand/collapse</li>
+            <li><strong>User Setup:</strong> Hanya bisa diakses admin/manager/direktur</li>
+            <li><strong>Auto-expand:</strong> Settings terbuka otomatis jika di halaman user-setup</li>
+            <li><strong>Active State:</strong> Menu aktif highlighted dengan warna biru</li>
+        </ul>
+    </div>
+
+    <div class="nav-test">
+        <h3>🔐 Demo Credentials</h3>
+        <p>Gunakan salah satu untuk test:</p>
+        <ul>
+            <li><strong>Admin:</strong> admin1 / admin123</li>
+            <li><strong>Manager:</strong> manager1 / manager123</li>
+            <li><strong>Direktur:</strong> direktur1 / direktur123</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('🧭 Navigation test page loaded');
+        console.log('📋 Available test links:');
+        console.log('- Dashboard: http://localhost:3000/');
+        console.log('- Login: http://localhost:3000/login');
+        console.log('- User Setup: http://localhost:3000/user-setup');
+        console.log('- Config: http://localhost:3000/config');
+        console.log('- Analytics: http://localhost:3000/analytics');
+    </script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Flow Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Authentication Flow Test</h1>
+    
+    <div class="section info">
+        <h3>Current Status</h3>
+        <p><strong>localStorage user:</strong> <span id="localStorage-user">Loading...</span></p>
+        <p><strong>localStorage token:</strong> <span id="localStorage-token">Loading...</span></p>
+        <p><strong>Current URL:</strong> <span id="current-url"></span></p>
+    </div>
+
+    <div class="section">
+        <h3>Test Actions</h3>
+        <button onclick="testLogin()">🔐 Test Login API</button>
+        <button onclick="clearStorage()">🗑️ Clear localStorage</button>
+        <button onclick="checkStorage()">🔍 Check localStorage</button>
+        <button onclick="goToLogin()">➡️ Go to Login Page</button>
+        <button onclick="goToDashboard()">➡️ Go to Dashboard</button>
+    </div>
+
+    <div class="section">
+        <h3>Test Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            
+            document.getElementById('localStorage-user').textContent = user ? 'EXISTS' : 'NULL';
+            document.getElementById('localStorage-token').textContent = token ? 'EXISTS (' + token.length + ' chars)' : 'NULL';
+            document.getElementById('current-url').textContent = window.location.href;
+        }
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = 'section ' + type;
+            div.innerHTML = '<strong>' + new Date().toLocaleTimeString() + ':</strong> ' + message;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        async function testLogin() {
+            log('🔐 Testing login API...', 'info');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'direktur1',
+                        password: 'direktur123'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Login API successful!', 'success');
+                    log('👤 User: ' + data.user.name + ' (' + data.user.role + ')', 'success');
+                    
+                    // Manually set localStorage
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('token', data.token);
+                    
+                    log('💾 Saved to localStorage', 'success');
+                    updateStatus();
+                } else {
+                    log('❌ Login failed: ' + data.error, 'error');
+                }
+                
+            } catch (error) {
+                log('❌ Network error: ' + error.message, 'error');
+            }
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            log('🗑️ localStorage cleared', 'info');
+            updateStatus();
+        }
+
+        function checkStorage() {
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            
+            if (user && token) {
+                try {
+                    const parsedUser = JSON.parse(user);
+                    log('✅ Valid user data found: ' + parsedUser.name + ' (' + parsedUser.role + ')', 'success');
+                } catch (e) {
+                    log('❌ Invalid user data in localStorage', 'error');
+                }
+            } else {
+                log('ℹ️ No user data in localStorage', 'info');
+            }
+            updateStatus();
+        }
+
+        function goToLogin() {
+            window.location.href = '/login';
+        }
+
+        function goToDashboard() {
+            window.location.href = '/';
+        }
+
+        // Initialize
+        updateStatus();
+        log('🚀 Test page loaded', 'info');
+    </script>
+</body>
+</html>

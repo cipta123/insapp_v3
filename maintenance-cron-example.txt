@@ -1,0 +1,9 @@
+# Add these lines to your crontab (crontab -e)
+# Daily health check at 9 AM
+0 9 * * * cd C:\xampp\htdocs\insapp_v3 && node system-health-check.js
+
+# Weekly backup every Sunday at 2 AM
+0 2 * * 0 cd C:\xampp\htdocs\insapp_v3 && node auto-backup.js
+
+# Emergency check every 4 hours during business hours
+0 9,13,17 * * 1-5 cd C:\xampp\htdocs\insapp_v3 && node system-health-check.js

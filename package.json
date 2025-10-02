@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "health-check": "node system-health-check.js",
+    "backup": "node auto-backup.js",
+    "emergency-fix": "node emergency-fix.js",
+    "debug-db": "node debug-db.js",
+    "test-login": "node test-login.js",
+    "test-maintenance": "node test-all-scripts.js"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
