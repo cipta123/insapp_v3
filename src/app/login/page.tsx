@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, User, Shield, Crown, Star, Briefcase, ChevronDown } from 'lucide-react'
+import { useAuth } from '@/components/AuthProvider'
 
 interface UserRole {
   id: string
@@ -57,6 +58,7 @@ export default function LoginPage() {
   const [showRoleDropdown, setShowRoleDropdown] = useState(false)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+  const { login } = useAuth()
 
   useEffect(() => {
     setMounted(true)
@@ -74,20 +76,15 @@ export default function LoginPage() {
         },
         body: JSON.stringify({
           username,
-          password,
-          role: selectedRole.id
+          password
         })
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        // Store user data and token
-        localStorage.setItem('user', JSON.stringify(data.user))
-        localStorage.setItem('token', data.token)
-        
-        // Redirect to dashboard
-        router.push('/')
+        // Use AuthProvider login function
+        login(data.user, data.token)
       } else {
         alert(data.error || 'Login failed')
       }
@@ -252,7 +249,10 @@ export default function LoginPage() {
                   <span className="font-medium">Staff:</span> staff1 / staff123
                 </div>
                 <div className="text-green-600">
-                  <span className="font-medium">Admin:</span> admin1 / admin123
+                  <span className="font-medium">Admin:</span> admin1 / password
+                </div>
+                <div className="text-orange-600">
+                  <span className="font-medium">New Admin:</span> admin1 / upbjj@UT22
                 </div>
               </div>
               <div className="space-y-1">

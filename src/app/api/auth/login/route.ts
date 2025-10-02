@@ -1,42 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-
-// Demo users for different roles
-const demoUsers = [
-  {
-    id: '1',
-    username: 'staff1',
-    password: '$2a$10$rOzJqQZQJQZQJQZQJQZQJu', // password: "staff123"
-    role: 'staff',
-    name: 'John Doe',
-    email: 'staff@company.com'
-  },
-  {
-    id: '2',
-    username: 'admin1',
-    password: '$2a$10$rOzJqQZQJQZQJQZQJQZQJu', // password: "admin123"
-    role: 'admin',
-    name: 'Jane Smith',
-    email: 'admin@company.com'
-  },
-  {
-    id: '3',
-    username: 'manager1',
-    password: '$2a$10$rOzJqQZQJQZQJQZQJQZQJu', // password: "manager123"
-    role: 'manager',
-    name: 'Mike Johnson',
-    email: 'manager@company.com'
-  },
-  {
-    id: '4',
-    username: 'direktur1',
-    password: '$2a$10$rOzJqQZQJQZQJQZQJQZQJu', // password: "direktur123"
-    role: 'direktur',
-    name: 'Sarah Wilson',
-    email: 'direktur@company.com'
-  }
-]
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,43 +10,51 @@ export async function POST(request: NextRequest) {
 
     console.log('🔐 LOGIN_ATTEMPT:', { username, role })
 
-    if (!username || !password || !role) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing username or password' },
         { status: 400 }
       )
     }
 
-    // For demo purposes, we'll use simple password validation
-    // In production, use proper password hashing
-    const validCredentials = {
-      staff: { username: 'staff1', password: 'staff123' },
-      admin: { username: 'admin1', password: 'admin123' },
-      manager: { username: 'manager1', password: 'manager123' },
-      direktur: { username: 'direktur1', password: 'direktur123' }
-    }
+    // Find user in database
+    const user = await prisma.systemUser.findUnique({
+      where: { username: username }
+    })
 
-    const roleCredentials = validCredentials[role as keyof typeof validCredentials]
-    
-    if (!roleCredentials || 
-        username !== roleCredentials.username || 
-        password !== roleCredentials.password) {
-      console.log('❌ LOGIN_FAILED: Invalid credentials')
+    if (!user) {
+      console.log('❌ LOGIN_FAILED: User not found')
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
 
-    // Find user
-    const user = demoUsers.find(u => u.username === username && u.role === role)
-    
-    if (!user) {
+    // Check if user is active
+    if (!user.isActive) {
+      console.log('❌ LOGIN_FAILED: User inactive')
       return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
+        { error: 'Account is inactive' },
+        { status: 401 }
       )
     }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password)
+    
+    if (!isPasswordValid) {
+      console.log('❌ LOGIN_FAILED: Invalid password')
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      )
+    }
+
+    // Update last login
+    await prisma.systemUser.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() }
+    })
 
     // Generate JWT token
     const token = jwt.sign(
@@ -95,7 +68,7 @@ export async function POST(request: NextRequest) {
       { expiresIn: '24h' }
     )
 
-    console.log('✅ LOGIN_SUCCESS:', { username, role, userId: user.id })
+    console.log('✅ LOGIN_SUCCESS:', { username, role: user.role, userId: user.id })
 
     return NextResponse.json({
       success: true,

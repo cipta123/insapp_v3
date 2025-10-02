@@ -28,38 +28,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check if user is logged in
+    console.log('🔍 AuthProvider: Checking localStorage...')
     const userData = localStorage.getItem('user')
     const token = localStorage.getItem('token')
+    
+    console.log('🔍 AuthProvider: userData exists:', !!userData)
+    console.log('🔍 AuthProvider: token exists:', !!token)
 
     if (userData && token) {
       try {
         const parsedUser = JSON.parse(userData)
+        console.log('✅ AuthProvider: Setting user:', parsedUser.name, `(${parsedUser.role})`)
         setUser(parsedUser)
       } catch (error) {
-        console.error('Error parsing user data:', error)
+        console.error('❌ AuthProvider: Error parsing user data:', error)
         localStorage.removeItem('user')
         localStorage.removeItem('token')
       }
     }
 
     setIsLoading(false)
+    console.log('🔍 AuthProvider: Initial check complete, isLoading set to false')
   }, [])
 
   useEffect(() => {
     // Redirect logic
+    console.log('🔄 AuthProvider: Redirect logic check:', { user: !!user, isLoading, pathname })
     if (!isLoading) {
       if (!user && pathname !== '/login') {
+        console.log('🔄 AuthProvider: Redirecting to login (no user)')
         router.push('/login')
       } else if (user && pathname === '/login') {
+        console.log('🔄 AuthProvider: Redirecting to dashboard (user exists)')
         router.push('/')
       }
     }
   }, [user, isLoading, pathname, router])
 
   const login = (userData: User, token: string) => {
+    console.log('🔐 AuthProvider: Login called with user:', userData.name, `(${userData.role})`)
     setUser(userData)
     localStorage.setItem('user', JSON.stringify(userData))
     localStorage.setItem('token', token)
+    console.log('🔐 AuthProvider: User state and localStorage updated, redirecting to dashboard')
     router.push('/')
   }
 
