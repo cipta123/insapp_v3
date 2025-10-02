@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageCircle, Instagram, MessageSquare, BarChart3, Settings, Bell, ExternalLink, User, ChevronDown, ChevronRight, Cog } from 'lucide-react'
+import { MessageCircle, Instagram, MessageSquare, BarChart3, Settings, Bell, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Platform } from '@/types'
 import Link from 'next/link'
@@ -15,7 +15,6 @@ interface SidebarProps {
 
 export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCounts }: SidebarProps) {
   const pathname = usePathname()
-  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false)
   
   const menuItems = [
     {
@@ -120,52 +119,10 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
               {pathname === '/debug-unread' && <ExternalLink className="h-4 w-4 ml-auto" />}
             </Link>
             
-            <div className="relative">
-              <button 
-                onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium"
-              >
-                <Settings className="h-5 w-5" />
-                <span>Settings</span>
-                {showSettingsDropdown ? 
-                  <ChevronDown className="h-4 w-4 ml-auto" /> : 
-                  <ChevronRight className="h-4 w-4 ml-auto" />
-                }
-              </button>
-              
-              {/* Settings Dropdown */}
-              {showSettingsDropdown && (
-                <div className="ml-4 mt-2 space-y-1">
-                  <Link 
-                    href="/profile"
-                    className={cn(
-                      "flex items-center space-x-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                      pathname === '/profile'
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    )}
-                  >
-                    <User className="h-4 w-4" />
-                    <span>Profile</span>
-                    {pathname === '/profile' && <ExternalLink className="h-3 w-3 ml-auto" />}
-                  </Link>
-                  
-                  <Link 
-                    href="/config"
-                    className={cn(
-                      "flex items-center space-x-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                      pathname === '/config'
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    )}
-                  >
-                    <Cog className="h-4 w-4" />
-                    <span>Config</span>
-                    {pathname === '/config' && <ExternalLink className="h-3 w-3 ml-auto" />}
-                  </Link>
-                </div>
-              )}
-            </div>
+            <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium">
+              <Settings className="h-5 w-5" />
+              <span>Settings</span>
+            </button>
           </div>
         </div>
       </nav>
