@@ -19,6 +19,7 @@ model InstagramMessage {
   text           String   @db.Text  // Back to required text field
   timestamp      DateTime
   isRead         Boolean  @default(false)
+  isFromBusiness Boolean  @default(false) // true if sent by business (via API or Instagram app)
   
   // Reply functionality
   replyToId      String?  // ID of the message being replied to

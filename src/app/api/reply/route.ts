@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
           text: finalMessage, // Save the message with context
           timestamp: new Date(),
           isRead: true, // Our own replies are considered "read"
+          isFromBusiness: true, // Mark as business message (sent via API)
         }
       });
       

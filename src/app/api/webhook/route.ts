@@ -9,7 +9,8 @@ const APP_SECRET = process.env.APP_SECRET;
 async function ensureUserInfo(userId: string) {
   try {
     // Skip if it's our business account
-    if (userId === '17841404217906448') {
+    const businessAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID || '17841404895525433';
+    if (userId === businessAccountId) {
       return;
     }
 
@@ -359,6 +360,10 @@ export async function POST(req: NextRequest) {
                 existingId: existingByContent.id
               });
             } else {
+              // Determine if message is from business
+              const businessAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID || '17841404895525433';
+              const isFromBusiness = event.sender.id === businessAccountId;
+              
               await prisma.instagramMessage.create({
                 data: {
                   messageId: event.message.mid,
@@ -367,9 +372,10 @@ export async function POST(req: NextRequest) {
                   recipientId: event.recipient.id,
                   text: event.message.text,
                   timestamp: new Date(event.timestamp),
+                  isFromBusiness: isFromBusiness, // Set based on sender ID
                 },
               });
-              console.log('✅ Message saved to database');
+              console.log('✅ Message saved to database', { isFromBusiness, senderId: event.sender.id });
 
               // Auto-fetch user info if not exists
               await ensureUserInfo(event.sender.id);

@@ -15,6 +15,7 @@ interface InstagramMessage {
   text: string;
   timestamp: string; // Comes as string from JSON
   isRead: boolean;
+  isFromBusiness?: boolean; // New field to detect business messages
   createdAt: string;
   updatedAt: string;
   // Reply functionality
@@ -132,48 +133,46 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
 
   return (
     <div className="w-1/2 bg-white flex flex-col h-screen">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+      {/* Header - Instagram Style */}
+      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-              <span className="text-lg font-medium text-gray-600">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <span className="text-lg font-medium text-white">
                 {getUserDisplayName(messages[0].senderId, userCache).charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">{getUserDisplayName(messages[0].senderId, userCache)}</h2>
-              <div className="text-xs text-gray-500">ID: {messages[0].senderId}</div>
-              <div className="flex items-center space-x-2">
-                <span className={cn(
-                  "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                  getPlatformColor('instagram-dm'),
-                  "text-white"
-                )}>
-                  {getPlatformName('instagram-dm')}
-                </span>
+              <h2 className="font-semibold">{getUserDisplayName(messages[0].senderId, userCache)}</h2>
+              <div className="text-sm text-purple-100">
+                Instagram Direct Message
               </div>
             </div>
           </div>
-          <button className="p-2 text-gray-400 hover:text-gray-600">
+          <button className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-full transition-colors">
             <MoreVertical className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      {/* Conversation History */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="space-y-3">
+      {/* Conversation History - WhatsApp Style */}
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e3f2fd' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+      }}>
+        <div className="space-y-4">
           {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(msg => {
+            // Use the new isFromBusiness field if available, fallback to senderId check
             const businessId = '17841404217906448';
-            const isFromBusiness = msg.senderId === businessId;
+            const isFromBusiness = msg.isFromBusiness !== undefined 
+              ? msg.isFromBusiness 
+              : msg.senderId === businessId;
             
             return (
               <div key={msg.id} className={`flex ${isFromBusiness ? 'justify-end' : 'justify-start'} group`}>
-                <div className={`relative max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                <div className={`relative max-w-xs lg:max-w-md px-4 py-3 rounded-lg shadow-sm ${
                   isFromBusiness 
-                    ? 'bg-blue-500 text-white rounded-br-none' 
-                    : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-white text-gray-800 shadow-md'
                 }`}>
                   {/* Reply context - if this message is a reply */}
                   {msg.replyTo && (
@@ -193,10 +192,13 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
                   
                   {/* Message Content - Text Only */}
                   <p className="text-sm leading-relaxed">{msg.text}</p>
-                  <div className={`text-xs mt-1 ${
+                  <div className={`text-xs mt-2 flex items-center justify-end space-x-1 ${
                     isFromBusiness ? 'text-blue-100' : 'text-gray-500'
                   }`}>
-                    {isClient ? formatTime(new Date(msg.timestamp)) : new Date(msg.timestamp).toLocaleString()}
+                    <span>{isClient ? formatTime(new Date(msg.timestamp)) : new Date(msg.timestamp).toLocaleString()}</span>
+                    {isFromBusiness && (
+                      <CheckCircle className="h-3 w-3" />
+                    )}
                   </div>
                 </div>
                 
@@ -204,7 +206,7 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
                 {!isFromBusiness && (
                   <button
                     onClick={() => setReplyingTo(msg)}
-                    className="ml-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="ml-2 p-1 rounded-full bg-white hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                     title="Reply to this message"
                   >
                     <Reply className="h-4 w-4 text-gray-600" />

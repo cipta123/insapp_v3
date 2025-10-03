@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { MessageCircle, Send, Phone, User, Clock, Check, CheckCheck, Image, FileText, Mic, Video } from 'lucide-react'
+import { MessageCircle, Send, Phone, User, Clock, Check, CheckCheck, Image, FileText, Mic, Video, RefreshCw } from 'lucide-react'
 
 interface WhatsAppMessage {
   id: string;
@@ -77,12 +77,20 @@ export default function WhatsAppContent() {
   useEffect(() => {
     fetchMessages()
     
-    // Disable auto-refresh temporarily to fix scroll issue
-    // const interval = setInterval(() => {
-    //   fetchMessages()
-    // }, 3000)
+    // Enable auto-polling every 3 seconds with tab visibility detection
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchMessages()
+        console.log('🔄 WHATSAPP_POLLING: Auto-refresh executed')
+      } else {
+        console.log('⏸️ WHATSAPP_POLLING: Tab inactive, skipping poll')
+      }
+    }, 3000)
 
-    // return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      console.log('🛑 WHATSAPP_POLLING: Polling stopped')
+    }
   }, [fetchMessages])
 
   const markContactMessagesAsRead = async (contactId: string) => {
@@ -212,6 +220,7 @@ export default function WhatsAppContent() {
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
               <Phone className="h-5 w-5 mr-2 text-green-600" />
               WhatsApp Chats
+              <RefreshCw className="h-4 w-4 ml-2 text-green-500 animate-pulse" />
             </h2>
             <div className="flex space-x-2">
               {/* Manual refresh button */}

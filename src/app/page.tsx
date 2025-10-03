@@ -22,6 +22,7 @@ interface InstagramMessage {
   text: string;
   timestamp: string; // Comes as string from JSON
   isRead: boolean;
+  isFromBusiness?: boolean; // New field to detect business messages
   createdAt: string;
   updatedAt: string;
 }
