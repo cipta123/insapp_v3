@@ -27,8 +27,8 @@ import { cn } from '@/lib/utils'
 
 // Get user display name with cache integration
 const getUserDisplayName = (userId: string, userCache: {[key: string]: any}) => {
-  // Hardcoded business account
-  if (userId === '17841404217906448') {
+  // Hardcoded business account - updated to match .env
+  if (userId === '17841404895525433') {
     return 'Customer Service Bot';
   }
   
@@ -57,10 +57,15 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
   const [userCache, setUserCache] = useState<{[key: string]: any}>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom only on initial load, not on every message change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (messages.length > 0 && conversationId) {
+      // Only auto-scroll on initial conversation load
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    }
+  }, [conversationId]) // Only trigger when conversation changes, not on every message update
 
   // Set client-side rendering flag
   useEffect(() => {
@@ -132,7 +137,7 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
   }
 
   return (
-    <div className="w-1/2 bg-white flex flex-col h-screen">
+    <div className="w-1/2 bg-white relative">
       {/* Header - Instagram Style */}
       <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4">
         <div className="flex items-center justify-between">
@@ -155,14 +160,14 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
         </div>
       </div>
 
-      {/* Conversation History - WhatsApp Style */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50" style={{
+      {/* Conversation History - Scrollable */}
+      <div className="absolute inset-0 top-[80px] bottom-[80px] overflow-y-auto p-4 bg-gray-50 chat-container" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e3f2fd' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
       }}>
         <div className="space-y-4">
           {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(msg => {
             // Use the new isFromBusiness field if available, fallback to senderId check
-            const businessId = '17841404217906448';
+            const businessId = '17841404895525433'; // Updated to match .env
             const isFromBusiness = msg.isFromBusiness !== undefined 
               ? msg.isFromBusiness 
               : msg.senderId === businessId;
@@ -263,7 +268,8 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
       )}
 
       {/* Reply Form */}
-      <ReplyForm 
+      <div className="absolute bottom-0 left-0 right-0 bg-white border-t">
+        <ReplyForm 
         recipientId={(() => {
           // Find the customer ID (not our business ID)
           const businessId = '17841404217906448'; // Our business account ID
@@ -297,6 +303,7 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
           }
         }}
       />
+      </div>
 
     </div>
   )

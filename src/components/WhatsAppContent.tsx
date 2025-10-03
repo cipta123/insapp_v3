@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { MessageCircle, Send, Phone, User, Clock, Check, CheckCheck, Image, FileText, Mic, Video, RefreshCw } from 'lucide-react'
 
 interface WhatsAppMessage {
@@ -33,6 +33,16 @@ export default function WhatsAppContent() {
   const [replyText, setReplyText] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom when messages change or contact is selected
+  useEffect(() => {
+    if (selectedContact) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    }
+  }, [messages, selectedContact])
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -156,6 +166,10 @@ export default function WhatsAppContent() {
         // Wait a bit before refreshing to avoid race condition
         setTimeout(() => {
           fetchMessages()
+          // Auto-scroll after sending message
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+          }, 200)
         }, 500)
       } else {
         console.error('Failed to send WhatsApp reply')
@@ -212,15 +226,14 @@ export default function WhatsAppContent() {
   }
 
   return (
-    <div className="h-full bg-gray-50 flex">
-      {/* Contacts List - WhatsApp Style */}
-      <div className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto">
-        <div className="p-4">
+    <>
+      {/* Contacts List - COPY EXACT Instagram DM Style */}
+      <div className="w-1/2 bg-white border-r border-gray-200 flex flex-col h-screen">
+        {/* Header - Same as MessageList */}
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Phone className="h-5 w-5 mr-2 text-green-600" />
+            <h2 className="text-lg font-semibold text-gray-900">
               WhatsApp Chats
-              <RefreshCw className="h-4 w-4 ml-2 text-green-500 animate-pulse" />
             </h2>
             <div className="flex space-x-2">
               {/* Manual refresh button */}
@@ -253,6 +266,11 @@ export default function WhatsAppContent() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Contacts List - Scrollable - Same as MessageList */}
+        <div className="flex-1 overflow-y-auto">
+        <div>
           
           {contacts.length === 0 ? (
             <div className="text-center py-8">
@@ -260,37 +278,18 @@ export default function WhatsAppContent() {
               <p className="text-gray-500">No WhatsApp conversations yet</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="divide-y divide-gray-100">
               {contacts.map((contact) => {
                 const contactMessages = getContactMessages(contact.id)
                 const lastMessage = contactMessages[contactMessages.length - 1]
                 const unreadCount = contactMessages.filter(msg => !msg.isRead && !msg.isFromBusiness).length
                 
-                // Debug logging
-                console.log('🔍 WHATSAPP_DEBUG:', {
-                  contactId: contact.id,
-                  totalMessages: contactMessages.length,
-                  unreadCount,
-                  unreadMessages: contactMessages.filter(msg => !msg.isRead && !msg.isFromBusiness),
-                  allMessages: contactMessages.map(m => ({
-                    id: m.id,
-                    text: m.text?.substring(0, 30),
-                    isRead: m.isRead,
-                    isFromBusiness: m.isFromBusiness,
-                    shouldCount: !m.isRead && !m.isFromBusiness
-                  }))
-                })
-                
                 return (
                   <div
                     key={contact.id}
                     onClick={() => handleContactSelect(contact)}
-                    className={`p-3 rounded-lg cursor-pointer transition-all duration-200 relative ${
-                      selectedContact?.id === contact.id
-                        ? 'bg-green-50 border border-green-200'
-                        : unreadCount > 0
-                        ? 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500'
-                        : 'bg-gray-50 hover:bg-gray-100'
+                    className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
+                      selectedContact?.id === contact.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
                     }`}
                   >
                     {/* Contact Header */}
@@ -355,10 +354,11 @@ export default function WhatsAppContent() {
             </div>
           )}
         </div>
+        </div>
       </div>
 
-      {/* Chat Area - WhatsApp Style */}
-      <div className="flex-1 flex flex-col">
+      {/* Chat Area - COPY EXACT MessageDetail Style */}
+      <div className="w-1/2 bg-white flex flex-col h-screen">
         {selectedContact ? (
           <>
             {/* Chat Header */}
@@ -381,9 +381,9 @@ export default function WhatsAppContent() {
               </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 bg-green-50" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23dcf8c6' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+            {/* Messages Area - Same as MessageDetail */}
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e3f2fd' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
             }}>
               {getContactMessages(selectedContact.id).length === 0 ? (
                 <div className="text-center py-8">
@@ -510,6 +510,8 @@ export default function WhatsAppContent() {
                       </div>
                     </div>
                   ))}
+                  {/* Scroll anchor */}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
             </div>
@@ -547,7 +549,7 @@ export default function WhatsAppContent() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-green-50">
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
             <div className="text-center">
               <Phone className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Contact</h3>
@@ -556,6 +558,6 @@ export default function WhatsAppContent() {
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }

@@ -8,7 +8,8 @@ import MessageDetail from '@/components/MessageDetail'
 import { quickReplies, stats } from '@/data/mockData'
 import { Platform, Reply } from '@/types'
 import CommentsContent from '@/components/CommentsContent'
-import WhatsAppContent from '@/components/WhatsAppContent'
+import WhatsAppList from '@/components/WhatsAppList'
+import WhatsAppDetail from '@/components/WhatsAppDetail'
 import { useAuth } from '@/components/AuthProvider'
 import { LogOut, User, Crown, Shield, Briefcase } from 'lucide-react'
 
@@ -228,7 +229,7 @@ export default function Home() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col max-w-full overflow-hidden">
         {/* User Header */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -270,17 +271,23 @@ export default function Home() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex overflow-hidden max-w-full">
           {selectedPlatform === 'instagram-comment' ? (
             /* Instagram Comments Interface */
             <div className="flex-1">
               <CommentsContent />
             </div>
           ) : selectedPlatform === 'whatsapp' ? (
-            /* WhatsApp Interface */
-            <div className="flex-1">
-              <WhatsAppContent />
-            </div>
+            /* WhatsApp Interface - EXACT same structure as Instagram DM */
+            <>
+              <WhatsAppList
+                selectedConversationId={selectedConversationId}
+                onContactSelect={setSelectedConversationId}
+              />
+              <WhatsAppDetail
+                conversationId={selectedConversationId}
+              />
+            </>
           ) : (
             /* Instagram DM Interface */
             <>

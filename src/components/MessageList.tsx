@@ -143,7 +143,7 @@ export default function MessageList({ messages, selectedConversationId, onMessag
   }
 
   return (
-    <div className="w-1/2 bg-white border-r border-gray-200 flex flex-col h-screen">
+    <div className="w-1/2 bg-white border-r border-gray-200 relative">
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
@@ -183,13 +183,13 @@ export default function MessageList({ messages, selectedConversationId, onMessag
       </div>
 
       {/* Message List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="absolute inset-0 top-[150px] overflow-y-auto">
         {filteredMessages.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <p>Tidak ada pesan yang ditemukan</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 py-2">
             {filteredMessages.map((message) => (
               <div
                 key={message.id}
