@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,114 +7,106 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model InstagramMessage {
-  id             String   @id @default(cuid())
-  messageId      String   @unique
-  conversationId String
-  senderId       String
-  recipientId    String
-  text           String   @db.Text  // Back to required text field
-  timestamp      DateTime
-  isRead         Boolean  @default(false)
-  isFromBusiness Boolean  @default(false) // true if sent by business (via API or Instagram app)
-  
-  // Reply functionality
-  replyToId      String?  // ID of the message being replied to
-  replyTo        InstagramMessage? @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies        InstagramMessage[] @relation("MessageReplies")
+model instagramcomment {
+  id                     String             @id
+  commentId              String             @unique(map: "InstagramComment_commentId_key")
+  postId                 String
+  parentCommentId        String?
+  userId                 String
+  username               String?
+  text                   String             @db.Text
+  timestamp              DateTime
+  isReplied              Boolean            @default(false)
+  isHidden               Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime
+  instagramcomment       instagramcomment?  @relation("instagramcommentToinstagramcomment", fields: [parentCommentId], references: [commentId], map: "InstagramComment_parentCommentId_fkey")
+  other_instagramcomment instagramcomment[] @relation("instagramcommentToinstagramcomment")
+  instagrampost          instagrampost      @relation(fields: [postId], references: [postId], map: "InstagramComment_postId_fkey")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([parentCommentId], map: "InstagramComment_parentCommentId_fkey")
+  @@index([postId], map: "InstagramComment_postId_fkey")
 }
 
-model InstagramUser {
-  id           String   @id // Instagram User ID
-  username     String?  // Instagram username (@username)
-  name         String?  // Display name
-  lastFetched  DateTime @default(now())
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model instagrammessage {
+  id                     String             @id
+  messageId              String             @unique(map: "InstagramMessage_messageId_key")
+  conversationId         String
+  senderId               String
+  recipientId            String
+  text                   String             @db.Text
+  timestamp              DateTime
+  isRead                 Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime
+  replyToId              String?
+  isFromBusiness         Boolean            @default(false)
+  instagrammessage       instagrammessage?  @relation("instagrammessageToinstagrammessage", fields: [replyToId], references: [id], map: "InstagramMessage_replyToId_fkey")
+  other_instagrammessage instagrammessage[] @relation("instagrammessageToinstagrammessage")
+
+  @@index([replyToId], map: "InstagramMessage_replyToId_fkey")
 }
 
-model InstagramPost {
-  id          String   @id @default(cuid())
-  postId      String   @unique // Instagram Post ID
-  caption     String?  @db.Text // Post caption
-  mediaType   String?  // IMAGE, VIDEO, CAROUSEL_ALBUM
-  permalink   String?  // Public URL to post
-  
-  // Relations
-  comments    InstagramComment[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model instagrampost {
+  id               String             @id
+  postId           String             @unique(map: "InstagramPost_postId_key")
+  caption          String?            @db.Text
+  mediaType        String?
+  permalink        String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  instagramcomment instagramcomment[]
 }
 
-model InstagramComment {
-  id               String   @id @default(cuid())
-  commentId        String   @unique // Instagram Comment ID
-  postId           String   // Reference to Instagram Post ID
-  parentCommentId  String?  // For reply threads
-  userId           String   // Instagram User ID who commented
-  username         String?  // Cache username for performance
-  text             String   @db.Text // Comment text
-  timestamp        DateTime // When comment was made
-  isReplied        Boolean  @default(false) // Has been replied to
-  isHidden         Boolean  @default(false) // Hidden by admin
-  
-  // Relations
-  post             InstagramPost @relation(fields: [postId], references: [postId])
-  parentComment    InstagramComment? @relation("CommentReplies", fields: [parentCommentId], references: [commentId])
-  replies          InstagramComment[] @relation("CommentReplies")
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model instagramuser {
+  id          String   @id
+  username    String?
+  name        String?
+  lastFetched DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
 }
 
-model WhatsAppMessage {
-  id             String   @id @default(cuid())
-  messageId      String   @unique // WhatsApp Message ID
-  conversationId String   // Phone number or conversation ID
-  senderId       String   // Phone number of sender
-  recipientId    String   // Phone number of recipient
-  text           String?  @db.Text // Message text (optional for media)
-  messageType    String   @default("text") // text, image, audio, video, document
-  mediaUrl       String?  // URL for media messages
-  timestamp      DateTime
-  isRead         Boolean  @default(false)
-  isFromBusiness Boolean  @default(false) // true if sent by business
-  
-  // Reply functionality
-  replyToId      String?  // ID of the message being replied to
-  replyTo        WhatsAppMessage? @relation("WhatsAppReplies", fields: [replyToId], references: [id])
-  replies        WhatsAppMessage[] @relation("WhatsAppReplies")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model WhatsAppContact {
-  id           String   @id // Phone number (e.g., +628123456789)
-  name         String?  // Contact name
-  profileName  String?  // WhatsApp profile name
-  lastSeen     DateTime @default(now())
-  isBlocked    Boolean  @default(false)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model SystemUser {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String   // Hashed password
-  name      String   // Full name
-  email     String?  // Optional email
-  role      String   // staff, admin, manager, direktur
-  isActive  Boolean  @default(true)
+model systemuser {
+  id        String    @id
+  username  String    @unique(map: "SystemUser_username_key")
+  password  String
+  name      String
+  email     String?
+  role      String
+  isActive  Boolean   @default(true)
   lastLogin DateTime?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime
+}
+
+model whatsappcontact {
+  id          String   @id
+  name        String?
+  profileName String?
+  lastSeen    DateTime @default(now())
+  isBlocked   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model whatsappmessage {
+  id                    String            @id
+  messageId             String            @unique(map: "WhatsAppMessage_messageId_key")
+  conversationId        String
+  senderId              String
+  recipientId           String
+  text                  String?           @db.Text
+  messageType           String            @default("text")
+  mediaUrl              String?
+  timestamp             DateTime
+  isRead                Boolean           @default(false)
+  isFromBusiness        Boolean           @default(false)
+  replyToId             String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime
+  whatsappmessage       whatsappmessage?  @relation("whatsappmessageTowhatsappmessage", fields: [replyToId], references: [id], map: "WhatsAppMessage_replyToId_fkey")
+  other_whatsappmessage whatsappmessage[] @relation("whatsappmessageTowhatsappmessage")
+
+  @@index([replyToId], map: "WhatsAppMessage_replyToId_fkey")
 }

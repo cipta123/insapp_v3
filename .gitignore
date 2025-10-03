@@ -44,3 +44,13 @@ emergency-fix-report-*.json
 maintenance-test-report-*.json
 *.backup
 *.restore
+
+# Keep database schema and sample data for GitHub
+!database-schema.sql
+!sample-data.sql
+!README-DATABASE.md
+
+# Temporary files
+temp/
+*.tmp
+*.log

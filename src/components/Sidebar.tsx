@@ -213,6 +213,21 @@ export default function Sidebar({ selectedPlatform, onPlatformChange, unreadCoun
         </div>
       </nav>
 
+      {/* System Actions */}
+      <div className="p-4 border-t border-gray-200 flex-shrink-0">
+        <div className="space-y-2 mb-4">
+          <a
+            href="/restore"
+            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>System Restore</span>
+          </a>
+        </div>
+      </div>
+
       {/* User Profile - Fixed at bottom */}
       <div className="p-4 border-t border-gray-200 flex-shrink-0">
         <div className="flex items-center space-x-3">
