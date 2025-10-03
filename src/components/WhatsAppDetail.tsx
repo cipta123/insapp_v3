@@ -21,9 +21,11 @@ interface WhatsAppMessage {
 
 interface WhatsAppDetailProps {
   conversationId: string | null;
+  onRefreshContacts?: () => void;
+  onRefreshUnreadCount?: () => void;
 }
 
-export default function WhatsAppDetail({ conversationId }: WhatsAppDetailProps) {
+export default function WhatsAppDetail({ conversationId, onRefreshContacts, onRefreshUnreadCount }: WhatsAppDetailProps) {
   const [messages, setMessages] = useState<WhatsAppMessage[]>([])
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
@@ -54,12 +56,44 @@ export default function WhatsAppDetail({ conversationId }: WhatsAppDetailProps) 
   useEffect(() => {
     if (conversationId) {
       fetchMessages()
+      // Mark messages as read when conversation is opened
+      markAsRead(conversationId)
       // Auto-scroll on conversation change
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       }, 200)
     }
   }, [conversationId]) // Only trigger when conversation changes
+
+  const markAsRead = async (conversationId: string) => {
+    try {
+      console.log('📖 Marking WhatsApp conversation as read:', conversationId)
+      const response = await fetch('/api/whatsapp/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ conversationId })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ WhatsApp messages marked as read:', result)
+        // Refresh contact list to update unread badges
+        if (onRefreshContacts) {
+          onRefreshContacts()
+        }
+        // Refresh sidebar unread count
+        if (onRefreshUnreadCount) {
+          onRefreshUnreadCount()
+        }
+      } else {
+        console.error('❌ Failed to mark WhatsApp messages as read')
+      }
+    } catch (error) {
+      console.error('❌ Error marking WhatsApp messages as read:', error)
+    }
+  }
 
   const handleSendReply = async () => {
     if (!conversationId || !replyText.trim() || sending) return

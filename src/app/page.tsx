@@ -5,7 +5,7 @@ import Sidebar from '@/components/Sidebar'
 import StatsCards from '@/components/StatsCards'
 import MessageList from '@/components/MessageList'
 import MessageDetail from '@/components/MessageDetail'
-import { quickReplies, stats } from '@/data/mockData'
+// Removed mockData imports to avoid conflicts with state variables
 import { Platform, Reply } from '@/types'
 import CommentsContent from '@/components/CommentsContent'
 import WhatsAppList from '@/components/WhatsAppList'
@@ -34,7 +34,11 @@ export default function Home() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<InstagramMessage[]>([])
   const [comments, setComments] = useState<any[]>([])
-  const [whatsappMessages, setWhatsappMessages] = useState<any[]>([])
+  const [posts, setPosts] = useState<any[]>([])
+  const [quickReplies, setQuickReplies] = useState<Reply[]>([])
+  const [loading, setLoading] = useState(true)
+  const [whatsappRefreshTrigger, setWhatsappRefreshTrigger] = useState(0)
+  const [whatsappUnreadCount, setWhatsappUnreadCount] = useState(0)
   const [stats, setStats] = useState({
     totalMessages: 0,
     unreadMessages: 0,
@@ -104,10 +108,26 @@ export default function Home() {
         throw new Error('Failed to fetch WhatsApp messages');
       }
       const data = await response.json();
-      setWhatsappMessages(data);
+      // WhatsApp messages are handled by WhatsAppList component
       console.log('📱 WhatsApp messages refreshed:', data.length, 'messages');
     } catch (error) {
       console.error('❌ Failed to refresh WhatsApp messages:', error);
+    }
+  };
+
+  const fetchWhatsAppUnreadCount = async () => {
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/whatsapp/unread-count`;
+      const response = await fetch(apiUrl, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Failed to fetch WhatsApp unread count');
+      }
+      const data = await response.json();
+      setWhatsappUnreadCount(data.unreadCount);
+      console.log('📊 WhatsApp unread count updated:', data.unreadCount);
+    } catch (error) {
+      console.error('❌ Failed to refresh WhatsApp unread count:', error);
+      setWhatsappUnreadCount(0);
     }
   };
 
@@ -131,6 +151,7 @@ export default function Home() {
     fetchMessages();
     fetchComments();
     fetchWhatsAppMessages();
+    fetchWhatsAppUnreadCount();
     fetchStats();
     
     // Track tab visibility for smart polling
@@ -146,6 +167,7 @@ export default function Home() {
         fetchMessages();
         fetchComments();
         fetchWhatsAppMessages();
+        fetchWhatsAppUnreadCount();
         fetchStats();
       }
     }, 3000); // 3 seconds
@@ -162,15 +184,15 @@ export default function Home() {
     // Count unread comments (comments that haven't been replied to)
     const unreadComments = comments.filter(c => !c.parentCommentId && !c.isReplied).length
     
-    // Count unread WhatsApp messages (messages from customers that haven't been read)
-    const unreadWhatsApp = whatsappMessages.filter(m => !m.isRead && !m.isFromBusiness).length
+    // Use real-time WhatsApp unread count from API
+    const unreadWhatsApp = whatsappUnreadCount
     
     return {
       'instagram-comment': unreadComments,
       'instagram-dm': messages.filter(m => !m.isRead).length,
       'whatsapp': unreadWhatsApp,
     }
-  }, [messages, comments, whatsappMessages])
+  }, [messages, comments, whatsappUnreadCount])
 
   // Handle platform change
   const handlePlatformChange = (platform: Platform | 'all') => {
@@ -283,9 +305,12 @@ export default function Home() {
               <WhatsAppList
                 selectedConversationId={selectedConversationId}
                 onContactSelect={setSelectedConversationId}
+                refreshTrigger={whatsappRefreshTrigger}
               />
               <WhatsAppDetail
                 conversationId={selectedConversationId}
+                onRefreshContacts={() => setWhatsappRefreshTrigger(prev => prev + 1)}
+                onRefreshUnreadCount={fetchWhatsAppUnreadCount}
               />
             </>
           ) : (
@@ -304,7 +329,7 @@ export default function Home() {
               <MessageDetail
                 conversationId={selectedConversationId}
                 messages={messages.filter(m => m.conversationId === selectedConversationId)}
-                quickReplies={quickReplies}
+                quickReplies={quickReplies as any}
                 onSendReply={handleSendReply}
                 onRefreshMessages={fetchMessages}
               />

@@ -161,7 +161,7 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
       </div>
 
       {/* Conversation History - Scrollable */}
-      <div className="absolute inset-0 top-[80px] bottom-[80px] overflow-y-auto p-4 bg-gray-50 chat-container" style={{
+      <div className="absolute inset-0 top-[80px] bottom-[120px] overflow-y-auto p-4 bg-gray-50 chat-container" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e3f2fd' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
       }}>
         <div className="space-y-4">
@@ -246,19 +246,19 @@ export default function MessageDetail({ conversationId, messages, quickReplies, 
 
       {/* Reply Context Display */}
       {replyingTo && (
-        <div className="border-t border-gray-200 bg-blue-50 p-3">
+        <div className="border-t border-gray-200 bg-blue-50 p-2">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="text-xs text-blue-600 font-medium mb-1">
                 Replying to {getUserDisplayName(replyingTo.senderId, userCache)}:
               </div>
-              <div className="text-sm text-gray-700 line-clamp-2">
+              <div className="text-xs text-gray-700 line-clamp-1 truncate">
                 {replyingTo.text}
               </div>
             </div>
             <button
               onClick={() => setReplyingTo(null)}
-              className="ml-2 p-1 rounded-full hover:bg-blue-100 text-blue-600"
+              className="ml-2 p-1 rounded-full hover:bg-blue-100 text-blue-600 text-xs"
               title="Cancel reply"
             >
               ✕
